@@ -42,18 +42,21 @@ export function ItemValidacaoForm({
   const [novaUnidade, setNovaUnidade] = useState<UnidadeBase>("g");
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [criandoPending, startCriarTransition] = useTransition();
   const router = useRouter();
   const toast = useToast();
 
   const insumoSelecionado = insumos.find((i) => i.id === insumoId);
 
-  async function handleCriarInsumo() {
+  function handleCriarInsumo() {
     if (!novoNome.trim()) return;
-    const insumo = await criarInsumoRapido(novoNome.trim(), novaUnidade);
-    setInsumos((prev) => [...prev, insumo]);
-    setInsumoId(insumo.id);
-    setCriandoInsumo(false);
-    setNovoNome("");
+    startCriarTransition(async () => {
+      const insumo = await criarInsumoRapido(novoNome.trim(), novaUnidade);
+      setInsumos((prev) => [...prev, insumo]);
+      setInsumoId(insumo.id);
+      setCriandoInsumo(false);
+      setNovoNome("");
+    });
   }
 
   function handleConfirmar() {
@@ -166,7 +169,12 @@ export function ItemValidacaoForm({
                 <option value="ml">ml</option>
                 <option value="un">un</option>
               </Select>
-              <Button type="button" variant="secondary" onClick={handleCriarInsumo}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleCriarInsumo}
+                loading={criandoPending}
+              >
                 Criar
               </Button>
             </div>

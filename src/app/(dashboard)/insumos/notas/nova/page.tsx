@@ -3,7 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { criarNotaFiscal } from "@/lib/actions/notas";
 import { NotaUploadField } from "@/components/nota-upload-field";
 import { Label, Input, FieldGroup } from "@/components/ui/field";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export default function NovaNotaFiscalPage() {
   return (
@@ -48,9 +48,7 @@ export default function NovaNotaFiscalPage() {
           encontrar na foto — você confirma cada um na próxima tela.
         </p>
 
-        <Button type="submit" className="w-full">
-          Enviar e processar
-        </Button>
+        <SubmitButton className="w-full">Enviar e processar</SubmitButton>
       </form>
     </div>
   );

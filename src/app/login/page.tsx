@@ -2,7 +2,7 @@ import Image from "next/image";
 import { AlertCircle } from "lucide-react";
 import { login } from "@/lib/actions/auth";
 import { Label, Input, FieldGroup } from "@/components/ui/field";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export default async function LoginPage({
   searchParams,
@@ -62,9 +62,7 @@ export default async function LoginPage({
             </div>
           </FieldGroup>
 
-          <Button type="submit" className="w-full">
-            Entrar
-          </Button>
+          <SubmitButton className="w-full">Entrar</SubmitButton>
         </form>
       </div>
     </div>

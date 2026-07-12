@@ -9,10 +9,10 @@ import {
   ClipboardList,
   Package,
   Truck,
-  LogOut,
   X,
 } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
+import { LogoutButton } from "@/components/logout-button";
 
 const LINKS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -87,13 +87,7 @@ export function Sidebar({
       <div className="border-t border-white/10 px-4 py-4">
         <p className="mb-2 truncate text-xs text-white/40">{userEmail}</p>
         <form action={logout}>
-          <button
-            type="submit"
-            className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-white/60 transition-colors duration-150 hover:text-white"
-          >
-            <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} />
-            Sair
-          </button>
+          <LogoutButton />
         </form>
       </div>
     </aside>

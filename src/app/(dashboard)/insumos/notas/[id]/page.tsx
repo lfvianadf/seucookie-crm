@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { reprocessarNota } from "@/lib/actions/notas";
 import { ItemValidacaoForm } from "@/components/item-validacao-form";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { NOTA_STATUS_LABEL, NOTA_STATUS_TONE } from "@/lib/nota-status";
 
 export default async function NotaFiscalPage({
@@ -77,9 +77,9 @@ export default async function NotaFiscalPage({
 
         {nota.status === "processando" && (
           <form action={reprocessarNota.bind(null, nota.id)}>
-            <Button type="submit" variant="secondary" size="sm">
+            <SubmitButton variant="secondary" size="sm">
               Reprocessar
-            </Button>
+            </SubmitButton>
           </form>
         )}
       </div>
