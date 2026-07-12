@@ -7,13 +7,7 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { UnidadeBase } from "@/lib/types/database";
-
-const UNIDADE_GRANDE: Record<UnidadeBase, string> = {
-  g: "kg",
-  ml: "L",
-  un: "un",
-};
+import { UNIDADE_GRANDE } from "@/lib/unidade";
 
 export default async function InsumosPage() {
   const supabase = await createClient();
@@ -87,7 +81,12 @@ export default async function InsumosPage() {
                   className="group border-b border-border transition-colors duration-150 last:border-0 hover:bg-berinjela-50/60"
                 >
                   <td className="px-4 py-3 font-medium text-berinjela">
-                    {insumo.nome}
+                    <Link
+                      href={`/insumos/${insumo.id}`}
+                      className="hover:underline underline-offset-2"
+                    >
+                      {insumo.nome}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-neutro-500">{insumo.unidade_base}</td>
                   <td className="px-4 py-3 text-right text-neutro-700">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Factory } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ProducaoModal } from "@/components/producao-modal";
@@ -60,7 +61,12 @@ export default async function ProducaoPage() {
                     {new Date(producao.data).toLocaleDateString("pt-BR")}
                   </td>
                   <td className="px-4 py-3 font-medium text-berinjela">
-                    {producao.receitas?.nome ?? "—"}
+                    <Link
+                      href={`/insumos/producao/${producao.id}`}
+                      className="hover:underline underline-offset-2"
+                    >
+                      {producao.receitas?.nome ?? "—"}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-neutro-700">
                     {producao.produtos?.nome ?? "—"}
