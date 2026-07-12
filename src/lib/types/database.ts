@@ -1,0 +1,387 @@
+export type PedidoStatus =
+  | "novo"
+  | "em_producao"
+  | "pronto"
+  | "saiu_entrega"
+  | "entregue"
+  | "cancelado";
+
+export type PedidoOrigem = "site" | "manual";
+
+export type UnidadeBase = "g" | "ml" | "un";
+
+export type NotaFiscalStatus =
+  | "processando"
+  | "aguardando_validacao"
+  | "confirmada";
+
+export type EntregaStatus = "pendente" | "saiu" | "entregue";
+
+export interface Database {
+  public: {
+    Tables: {
+      produtos: {
+        Row: {
+          id: string;
+          nome: string;
+          numero_receita: number | null;
+          descricao: string | null;
+          preco: number;
+          disponivel: boolean;
+          capitulo: string | null;
+          foto_url: string | null;
+          receita_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          numero_receita?: number | null;
+          descricao?: string | null;
+          preco: number;
+          disponivel?: boolean;
+          capitulo?: string | null;
+          foto_url?: string | null;
+          receita_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["produtos"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "produtos_receita_id_fkey";
+            columns: ["receita_id"];
+            isOneToOne: false;
+            referencedRelation: "receitas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      clientes: {
+        Row: {
+          id: string;
+          nome: string;
+          telefone: string;
+          endereco: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          telefone: string;
+          endereco?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["clientes"]["Insert"]>;
+        Relationships: [];
+      };
+      pedidos: {
+        Row: {
+          id: string;
+          cliente_id: string;
+          status: PedidoStatus;
+          origem: PedidoOrigem;
+          valor_total: number;
+          observacoes: string | null;
+          data_pedido: string;
+          data_entrega_prevista: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          cliente_id: string;
+          status?: PedidoStatus;
+          origem?: PedidoOrigem;
+          valor_total: number;
+          observacoes?: string | null;
+          data_pedido?: string;
+          data_entrega_prevista?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["pedidos"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey";
+            columns: ["cliente_id"];
+            isOneToOne: false;
+            referencedRelation: "clientes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pedido_itens: {
+        Row: {
+          id: string;
+          pedido_id: string;
+          produto_id: string;
+          quantidade: number;
+          preco_unitario: number;
+        };
+        Insert: {
+          id?: string;
+          pedido_id: string;
+          produto_id: string;
+          quantidade: number;
+          preco_unitario: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["pedido_itens"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "pedido_itens_pedido_id_fkey";
+            columns: ["pedido_id"];
+            isOneToOne: false;
+            referencedRelation: "pedidos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pedido_itens_produto_id_fkey";
+            columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      insumos: {
+        Row: {
+          id: string;
+          nome: string;
+          unidade_base: UnidadeBase;
+          estoque_atual: number;
+          custo_medio_por_unidade: number;
+          preco_atual: number;
+          numero_compras: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          unidade_base: UnidadeBase;
+          estoque_atual?: number;
+          custo_medio_por_unidade?: number;
+          preco_atual?: number;
+          numero_compras?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["insumos"]["Insert"]>;
+        Relationships: [];
+      };
+      insumo_apelidos: {
+        Row: {
+          id: string;
+          insumo_id: string;
+          texto_nota: string;
+        };
+        Insert: {
+          id?: string;
+          insumo_id: string;
+          texto_nota: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["insumo_apelidos"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "insumo_apelidos_insumo_id_fkey";
+            columns: ["insumo_id"];
+            isOneToOne: false;
+            referencedRelation: "insumos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      receitas: {
+        Row: {
+          id: string;
+          nome: string;
+          rendimento_cookies: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          rendimento_cookies: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["receitas"]["Insert"]>;
+        Relationships: [];
+      };
+      receita_insumos: {
+        Row: {
+          id: string;
+          receita_id: string;
+          insumo_id: string;
+          quantidade: number;
+        };
+        Insert: {
+          id?: string;
+          receita_id: string;
+          insumo_id: string;
+          quantidade: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["receita_insumos"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "receita_insumos_receita_id_fkey";
+            columns: ["receita_id"];
+            isOneToOne: false;
+            referencedRelation: "receitas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "receita_insumos_insumo_id_fkey";
+            columns: ["insumo_id"];
+            isOneToOne: false;
+            referencedRelation: "insumos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notas_fiscais: {
+        Row: {
+          id: string;
+          foto_url: string | null;
+          data_compra: string;
+          valor_total: number;
+          status: NotaFiscalStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          foto_url?: string | null;
+          data_compra: string;
+          valor_total: number;
+          status?: NotaFiscalStatus;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["notas_fiscais"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      nota_itens: {
+        Row: {
+          id: string;
+          nota_id: string;
+          texto_original: string;
+          insumo_id: string | null;
+          quantidade: number;
+          valor: number;
+          validado: boolean;
+        };
+        Insert: {
+          id?: string;
+          nota_id: string;
+          texto_original: string;
+          insumo_id?: string | null;
+          quantidade: number;
+          valor: number;
+          validado?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["nota_itens"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "nota_itens_nota_id_fkey";
+            columns: ["nota_id"];
+            isOneToOne: false;
+            referencedRelation: "notas_fiscais";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nota_itens_insumo_id_fkey";
+            columns: ["insumo_id"];
+            isOneToOne: false;
+            referencedRelation: "insumos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      producoes: {
+        Row: {
+          id: string;
+          receita_id: string;
+          produto_id: string;
+          quantidade_produzida: number;
+          data: string;
+        };
+        Insert: {
+          id?: string;
+          receita_id: string;
+          produto_id: string;
+          quantidade_produzida: number;
+          data?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["producoes"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "producoes_receita_id_fkey";
+            columns: ["receita_id"];
+            isOneToOne: false;
+            referencedRelation: "receitas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "producoes_produto_id_fkey";
+            columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      entregas: {
+        Row: {
+          id: string;
+          pedido_id: string;
+          endereco: string;
+          status: EntregaStatus;
+          data_saida: string | null;
+          data_entrega: string | null;
+        };
+        Insert: {
+          id?: string;
+          pedido_id: string;
+          endereco: string;
+          status?: EntregaStatus;
+          data_saida?: string | null;
+          data_entrega?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["entregas"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "entregas_pedido_id_fkey";
+            columns: ["pedido_id"];
+            isOneToOne: false;
+            referencedRelation: "pedidos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      registrar_producao: {
+        Args: {
+          p_receita_id: string;
+          p_produto_id: string;
+          p_quantidade: number;
+          p_data?: string;
+        };
+        Returns: string;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+}

@@ -1,26 +1,150 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf8;
+  --foreground: #43303b;
+
+  /* marca — esqueleto, não vitrine */
+  --berinjela: #43303b;
+  --berinjela-50: #f4f1f2;
+  --berinjela-100: #e6dfe2;
+  --rosa: #c86b85;
+  --rosa-hover: #b85a74;
+  --salvia: #7d9b76;
+  --salvia-bg: rgba(125, 155, 118, 0.14);
+  --salvia-text: #4f6b49;
+
+  /* funcional */
+  --neutro-50: #fafaf8;
+  --neutro-100: #f2f1ef;
+  --neutro-200: #e4e2df;
+  --neutro-300: #cfccc8;
+  --neutro-500: #8a8681;
+  --neutro-700: #5a5652;
+
+  --erro: #c8534b;
+  --erro-bg: rgba(200, 83, 75, 0.12);
+  --erro-text: #a8382f;
+  --atencao: #b8843a;
+  --atencao-bg: rgba(184, 132, 58, 0.14);
+  --atencao-text: #8f6423;
+
+  /* bordas de baixíssimo contraste — separação por espaço/fundo, não linha */
+  --border: rgba(67, 48, 59, 0.08);
+  --border-strong: rgba(67, 48, 59, 0.14);
+
+  /* anel de foco */
+  --ring: rgba(200, 107, 133, 0.18);
+
+  --ease: 150ms ease;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-berinjela: var(--berinjela);
+  --color-berinjela-50: var(--berinjela-50);
+  --color-berinjela-100: var(--berinjela-100);
+  --color-rosa: var(--rosa);
+  --color-rosa-hover: var(--rosa-hover);
+  --color-salvia: var(--salvia);
+  --color-salvia-bg: var(--salvia-bg);
+  --color-salvia-text: var(--salvia-text);
+  --color-neutro-50: var(--neutro-50);
+  --color-neutro-100: var(--neutro-100);
+  --color-neutro-200: var(--neutro-200);
+  --color-neutro-300: var(--neutro-300);
+  --color-neutro-500: var(--neutro-500);
+  --color-neutro-700: var(--neutro-700);
+  --color-erro: var(--erro);
+  --color-erro-bg: var(--erro-bg);
+  --color-erro-text: var(--erro-text);
+  --color-atencao: var(--atencao);
+  --color-atencao-bg: var(--atencao-bg);
+  --color-atencao-text: var(--atencao-text);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --shadow-sm: 0 1px 2px rgba(67, 48, 59, 0.04);
+  --shadow-md: 0 2px 8px rgba(67, 48, 59, 0.06);
+  --shadow-modal: 0 12px 32px rgba(67, 48, 59, 0.14);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--border);
+}
+
+/* foco de teclado visível e colorido — nunca o outline azul padrão */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: none;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-in {
+  animation: modal-in 180ms ease-out;
+}
+
+.animate-overlay-in {
+  animation: overlay-in 180ms ease-out;
+}
+
+.animate-toast-in {
+  animation: toast-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-in,
+  .animate-overlay-in,
+  .animate-toast-in {
+    animation: none;
+  }
 }
