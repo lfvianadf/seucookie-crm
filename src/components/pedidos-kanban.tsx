@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { atualizarStatusPedido } from "@/lib/actions/pedidos";
 import { useToast } from "@/components/ui/toast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { PedidoDetalheModal } from "@/components/pedido-detalhe-modal";
 import {
   STATUS_ORDEM,
   STATUS_LABEL,
@@ -13,6 +14,12 @@ import {
 } from "@/lib/pedido-status";
 import type { PedidoStatus } from "@/lib/types/database";
 
+type Item = {
+  quantidade: number;
+  preco_unitario: number;
+  produtos: { nome: string } | null;
+};
+
 type Pedido = {
   id: string;
   status: PedidoStatus;
@@ -20,7 +27,8 @@ type Pedido = {
   valor_total: number;
   observacoes: string | null;
   data_pedido: string;
-  clientes: { nome: string; telefone: string } | null;
+  clientes: { nome: string; telefone: string; endereco: string | null } | null;
+  pedido_itens: Item[];
 };
 
 const TONE_SELECT_CLASSES: Record<BadgeTone, string> = {
@@ -34,6 +42,7 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
   const [pedidos, setPedidos] = useState(pedidosIniciais);
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [colunaAlvo, setColunaAlvo] = useState<PedidoStatus | null>(null);
+  const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const router = useRouter();
   const toast = useToast();
@@ -47,6 +56,8 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
       });
     });
   }
+
+  const pedidoSelecionado = pedidos.find((p) => p.id === pedidoSelecionadoId) ?? null;
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
@@ -92,7 +103,8 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
                     setArrastando(pedido.id);
                   }}
                   onDragEnd={() => setArrastando(null)}
-                  className={`cursor-grab rounded-lg border border-border bg-white p-3 shadow-sm transition-all duration-150 ease-out hover:shadow-md active:cursor-grabbing ${
+                  onClick={() => setPedidoSelecionadoId(pedido.id)}
+                  className={`cursor-pointer rounded-lg border border-border bg-white p-3 shadow-sm transition-all duration-150 ease-out hover:shadow-md active:cursor-grabbing ${
                     arrastando === pedido.id ? "opacity-40" : ""
                   }`}
                 >
@@ -119,6 +131,7 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
                     </Badge>
                     <select
                       value={pedido.status}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) =>
                         moverPedido(pedido.id, e.target.value as PedidoStatus)
                       }
@@ -142,6 +155,11 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
           </div>
         );
       })}
+
+      <PedidoDetalheModal
+        pedido={pedidoSelecionado}
+        onClose={() => setPedidoSelecionadoId(null)}
+      />
     </div>
   );
 }

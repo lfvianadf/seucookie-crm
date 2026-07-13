@@ -380,6 +380,10 @@ export interface Database {
         };
         Returns: string;
       };
+      buscar_cliente_por_telefone: {
+        Args: { p_telefone: string };
+        Returns: { id: string; nome: string; endereco: string | null }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

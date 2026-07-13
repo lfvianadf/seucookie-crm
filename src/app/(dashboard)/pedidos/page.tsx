@@ -8,7 +8,7 @@ export default async function PedidosPage() {
     supabase
       .from("pedidos")
       .select(
-        "id, status, origem, valor_total, observacoes, data_pedido, clientes(nome, telefone)"
+        "id, status, origem, valor_total, observacoes, data_pedido, clientes(nome, telefone, endereco), pedido_itens(quantidade, preco_unitario, produtos(nome))"
       )
       .order("data_pedido", { ascending: false }),
     supabase
