@@ -165,7 +165,7 @@ export function ProdutoModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="capitulo">Capítulo</Label>
+                <Label htmlFor="capitulo">Seção do cardápio</Label>
                 <Input
                   id="capitulo"
                   name="capitulo"
