@@ -11,13 +11,18 @@ import {
   STATUS_LABEL,
   STATUS_COLUNA_ACCENT,
 } from "@/lib/pedido-status";
-import type { PedidoStatus } from "@/lib/types/database";
+import type { PedidoStatus, TipoProduto } from "@/lib/types/database";
 
 type Item = {
+  id: string;
   produto_id: string;
   quantidade: number;
   preco_unitario: number;
-  produtos: { nome: string } | null;
+  produtos: { nome: string; tipo_produto: TipoProduto } | null;
+  pedido_item_composicao: {
+    quantidade: number;
+    produtos: { nome: string } | null;
+  }[];
 };
 
 type Pedido = {
@@ -31,7 +36,7 @@ type Pedido = {
   pedido_itens: Item[];
 };
 
-type Produto = { id: string; nome: string; preco: number };
+type Produto = { id: string; nome: string; preco: number; tipo_produto: TipoProduto };
 
 export function PedidosKanban({
   pedidosIniciais,
@@ -97,7 +102,14 @@ export function PedidosKanban({
             <div className="flex min-h-16 flex-1 flex-col gap-2 px-2 pb-2">
               {itens.map((pedido) => {
                 const resumoItens = pedido.pedido_itens
-                  .map((item) => `${item.quantidade}x ${item.produtos?.nome ?? "—"}`)
+                  .map((item) => {
+                    const base = `${item.quantidade}x ${item.produtos?.nome ?? "—"}`;
+                    if (!item.pedido_item_composicao.length) return base;
+                    const composicao = item.pedido_item_composicao
+                      .map((c) => `${c.quantidade}x ${c.produtos?.nome ?? "—"}`)
+                      .join(", ");
+                    return `${base} (${composicao})`;
+                  })
                   .join(", ");
 
                 return (

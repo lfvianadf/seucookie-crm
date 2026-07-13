@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, AlertCircle, CheckCircle2, Minus, Plus } from "lucide-react";
 import { criarPedidoManual, type ItemCarrinho } from "@/lib/actions/pedidos";
 import {
   buscarClientePorTelefone,
@@ -9,12 +9,14 @@ import {
 } from "@/lib/actions/clientes";
 import { Label, Input, Textarea } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import type { TipoProduto } from "@/lib/types/database";
 
 type Produto = {
   id: string;
   nome: string;
   preco: number;
   capitulo: string | null;
+  tipo_produto: TipoProduto;
 };
 
 type ClienteSugestao = {
@@ -24,11 +26,23 @@ type ClienteSugestao = {
   endereco: string | null;
 };
 
+type BoxCookies = Record<string, { id: string; nome: string; preco: number }[]>;
+
+type CaixaCarrinho = {
+  tempId: string;
+  produtoId: string;
+  nome: string;
+  preco: number;
+  composicao: { cookieId: string; nome: string; quantidade: number }[];
+};
+
 export function NovoPedidoForm({
   produtos,
+  boxCookies,
   onSuccess,
 }: {
   produtos: Produto[];
+  boxCookies: BoxCookies;
   onSuccess?: () => void;
 }) {
   const [telefone, setTelefone] = useState("");
@@ -37,11 +51,17 @@ export function NovoPedidoForm({
   const [clienteEncontrado, setClienteEncontrado] = useState(false);
   const [observacoes, setObservacoes] = useState("");
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
+  const [caixas, setCaixas] = useState<CaixaCarrinho[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [sugestoesNome, setSugestoesNome] = useState<ClienteSugestao[]>([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [caixaEmMontagem, setCaixaEmMontagem] = useState<Produto | null>(null);
+  const [composicaoEmMontagem, setComposicaoEmMontagem] = useState<
+    Record<string, number>
+  >({});
 
   async function handleTelefoneBlur() {
     if (!telefone.trim()) return;
@@ -83,8 +103,13 @@ export function NovoPedidoForm({
     setSugestoesNome([]);
   }
 
-  function adicionarItem(produtoId: string) {
-    setCarrinho((prev) => ({ ...prev, [produtoId]: (prev[produtoId] ?? 0) + 1 }));
+  function adicionarItem(produto: Produto) {
+    if (produto.tipo_produto === "box") {
+      setCaixaEmMontagem(produto);
+      setComposicaoEmMontagem({});
+      return;
+    }
+    setCarrinho((prev) => ({ ...prev, [produto.id]: (prev[produto.id] ?? 0) + 1 }));
   }
 
   function removerItem(produtoId: string) {
@@ -99,6 +124,57 @@ export function NovoPedidoForm({
     });
   }
 
+  function ajustarComposicao(cookieId: string, delta: number) {
+    setComposicaoEmMontagem((prev) => {
+      const atual = (prev[cookieId] ?? 0) + delta;
+      if (atual <= 0) {
+        const resto = { ...prev };
+        delete resto[cookieId];
+        return resto;
+      }
+      return { ...prev, [cookieId]: atual };
+    });
+  }
+
+  function cancelarMontagem() {
+    setCaixaEmMontagem(null);
+    setComposicaoEmMontagem({});
+  }
+
+  function confirmarMontagem() {
+    if (!caixaEmMontagem) return;
+    const cookiesDaBox = boxCookies[caixaEmMontagem.id] ?? [];
+    const composicao = Object.entries(composicaoEmMontagem)
+      .filter(([, qtd]) => qtd > 0)
+      .map(([cookieId, quantidade]) => ({
+        cookieId,
+        nome: cookiesDaBox.find((c) => c.id === cookieId)?.nome ?? "—",
+        quantidade,
+      }));
+
+    if (composicao.length === 0) {
+      setErro("Escolha ao menos um cookie pra montar a box.");
+      return;
+    }
+
+    setCaixas((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
+        produtoId: caixaEmMontagem.id,
+        nome: caixaEmMontagem.nome,
+        preco: caixaEmMontagem.preco,
+        composicao,
+      },
+    ]);
+    setErro(null);
+    cancelarMontagem();
+  }
+
+  function removerCaixa(tempId: string) {
+    setCaixas((prev) => prev.filter((c) => c.tempId !== tempId));
+  }
+
   const itensCarrinho = Object.entries(carrinho)
     .map(([produtoId, quantidade]) => {
       const produto = produtos.find((p) => p.id === produtoId);
@@ -106,10 +182,12 @@ export function NovoPedidoForm({
     })
     .filter((item): item is { produto: Produto; quantidade: number } => !!item);
 
-  const total = itensCarrinho.reduce(
+  const totalCookies = itensCarrinho.reduce(
     (soma, item) => soma + item.produto.preco * item.quantidade,
     0
   );
+  const totalCaixas = caixas.reduce((soma, c) => soma + c.preco, 0);
+  const total = totalCookies + totalCaixas;
 
   function handleSubmit() {
     setErro(null);
@@ -118,16 +196,27 @@ export function NovoPedidoForm({
       setErro("Nome e telefone do cliente são obrigatórios.");
       return;
     }
-    if (itensCarrinho.length === 0) {
+    if (itensCarrinho.length === 0 && caixas.length === 0) {
       setErro("Adicione ao menos um item ao pedido.");
       return;
     }
 
-    const itens: ItemCarrinho[] = itensCarrinho.map((item) => ({
-      produto_id: item.produto.id,
-      quantidade: item.quantidade,
-      preco_unitario: item.produto.preco,
-    }));
+    const itens: ItemCarrinho[] = [
+      ...itensCarrinho.map((item) => ({
+        produto_id: item.produto.id,
+        quantidade: item.quantidade,
+        preco_unitario: item.produto.preco,
+      })),
+      ...caixas.map((c) => ({
+        produto_id: c.produtoId,
+        quantidade: 1,
+        preco_unitario: c.preco,
+        composicao: c.composicao.map((item) => ({
+          cookieProdutoId: item.cookieId,
+          quantidade: item.quantidade,
+        })),
+      })),
+    ];
 
     startTransition(async () => {
       try {
@@ -223,17 +312,19 @@ export function NovoPedidoForm({
                   .filter((p) => (p.capitulo ?? "Outros") === capitulo)
                   .map((produto) => {
                     const qtd = carrinho[produto.id] ?? 0;
+                    const ehBox = produto.tipo_produto === "box";
                     return (
                       <button
                         key={produto.id}
                         type="button"
-                        onClick={() => adicionarItem(produto.id)}
+                        onClick={() => adicionarItem(produto)}
                         className={`min-h-11 cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-all duration-150 ease-out ${
                           qtd > 0
                             ? "border-rosa bg-rosa text-white shadow-sm"
                             : "border-border-strong bg-white text-berinjela hover:border-rosa hover:-translate-y-px"
                         }`}
                       >
+                        {ehBox && "📦 "}
                         {produto.nome} · R$ {produto.preco.toFixed(2)}
                         {qtd > 0 && ` · ${qtd}x`}
                       </button>
@@ -247,6 +338,54 @@ export function NovoPedidoForm({
               Nenhum produto disponível. Cadastre no Cardápio primeiro.
             </p>
           )}
+
+          {caixaEmMontagem && (
+            <div className="mt-4 rounded-lg border border-rosa/30 bg-rosa/5 p-3">
+              <p className="mb-3 text-sm font-medium text-berinjela">
+                Montar {caixaEmMontagem.nome}
+              </p>
+              <div className="space-y-2">
+                {(boxCookies[caixaEmMontagem.id] ?? []).map((cookie) => (
+                  <div key={cookie.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-berinjela">{cookie.nome}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => ajustarComposicao(cookie.id, -1)}
+                        className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border-strong text-neutro-500 hover:bg-berinjela-50"
+                      >
+                        <Minus className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      </button>
+                      <span className="w-5 text-center text-sm font-medium text-berinjela">
+                        {composicaoEmMontagem[cookie.id] ?? 0}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => ajustarComposicao(cookie.id, 1)}
+                        className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border-strong text-neutro-500 hover:bg-berinjela-50"
+                      >
+                        <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!(boxCookies[caixaEmMontagem.id] ?? []).length && (
+                  <p className="text-xs text-neutro-500">
+                    Essa box ainda não tem cookies configurados. Edite ela no
+                    Cardápio primeiro.
+                  </p>
+                )}
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={cancelarMontagem}>
+                  Cancelar
+                </Button>
+                <Button type="button" onClick={confirmarMontagem}>
+                  Adicionar caixa
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -254,7 +393,7 @@ export function NovoPedidoForm({
         <div className="sticky top-0 rounded-xl border border-border bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-berinjela">Resumo</h2>
 
-          {itensCarrinho.length === 0 && (
+          {itensCarrinho.length === 0 && caixas.length === 0 && (
             <p className="text-sm text-neutro-500">Nenhum item selecionado.</p>
           )}
 
@@ -275,6 +414,26 @@ export function NovoPedidoForm({
                 >
                   <X className="h-3.5 w-3.5" strokeWidth={1.75} />
                 </button>
+              </li>
+            ))}
+            {caixas.map((caixa) => (
+              <li key={caixa.tempId} className="text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-berinjela">📦 {caixa.nome}</span>
+                  <button
+                    type="button"
+                    onClick={() => removerCaixa(caixa.tempId)}
+                    aria-label={`Remover ${caixa.nome}`}
+                    className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutro-400 transition-colors duration-150 hover:bg-erro-bg hover:text-erro"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  </button>
+                </div>
+                <p className="text-xs text-neutro-500">
+                  {caixa.composicao
+                    .map((c) => `${c.quantidade}x ${c.nome}`)
+                    .join(", ")}
+                </p>
               </li>
             ))}
           </ul>

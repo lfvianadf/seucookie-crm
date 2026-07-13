@@ -9,8 +9,10 @@ import { Label, Input, Select, Textarea, FieldGroup } from "@/components/ui/fiel
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { criarProduto, atualizarProduto } from "@/lib/actions/produtos";
+import type { TipoProduto } from "@/lib/types/database";
 
 type Receita = { id: string; nome: string };
+type CookieOpcao = { id: string; nome: string };
 
 type ProdutoExistente = {
   id: string;
@@ -21,24 +23,44 @@ type ProdutoExistente = {
   descricao: string | null;
   disponivel: boolean;
   qtd_estoque: number;
+  tipo_produto: TipoProduto;
   foto_url: string | null;
   receita_id: string | null;
 };
 
 export function ProdutoModal({
   receitas,
+  cookiesDisponiveis,
   produtoExistente,
+  boxCookieIdsExistentes,
   trigger,
 }: {
   receitas: Receita[];
+  cookiesDisponiveis: CookieOpcao[];
   produtoExistente?: ProdutoExistente;
+  boxCookieIdsExistentes?: string[];
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [tipoProduto, setTipoProduto] = useState<TipoProduto>(
+    produtoExistente?.tipo_produto ?? "cookie"
+  );
+  const [cookiesSelecionados, setCookiesSelecionados] = useState<Set<string>>(
+    new Set(boxCookieIdsExistentes ?? [])
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const toast = useToast();
+
+  function alternarCookie(id: string) {
+    setCookiesSelecionados((prev) => {
+      const novo = new Set(prev);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,12 +71,15 @@ export function ProdutoModal({
       } else {
         await criarProduto(formData);
         formRef.current?.reset();
+        setCookiesSelecionados(new Set());
       }
       setOpen(false);
       toast(produtoExistente ? "Produto salvo" : "Produto criado");
       router.refresh();
     });
   }
+
+  const ehBox = tipoProduto === "box";
 
   return (
     <>
@@ -102,6 +127,19 @@ export function ProdutoModal({
               />
             </div>
 
+            <div>
+              <Label htmlFor="tipo_produto">Tipo</Label>
+              <Select
+                id="tipo_produto"
+                name="tipo_produto"
+                value={tipoProduto}
+                onChange={(e) => setTipoProduto(e.target.value as TipoProduto)}
+              >
+                <option value="cookie">Cookie</option>
+                <option value="box">Box (caixa sortida)</option>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="numero_receita">Nº receita</Label>
@@ -134,17 +172,52 @@ export function ProdutoModal({
                   defaultValue={produtoExistente?.capitulo ?? ""}
                 />
               </div>
-              <div>
-                <Label htmlFor="qtd_estoque">Estoque (cookies)</Label>
-                <Input
-                  id="qtd_estoque"
-                  name="qtd_estoque"
-                  type="number"
-                  min={0}
-                  defaultValue={produtoExistente?.qtd_estoque ?? 0}
-                />
-              </div>
+              {!ehBox && (
+                <div>
+                  <Label htmlFor="qtd_estoque">Estoque (cookies)</Label>
+                  <Input
+                    id="qtd_estoque"
+                    name="qtd_estoque"
+                    type="number"
+                    min={0}
+                    defaultValue={produtoExistente?.qtd_estoque ?? 0}
+                  />
+                </div>
+              )}
             </div>
+
+            {ehBox && (
+              <div>
+                <Label>Cookies que podem ir dentro dessa box</Label>
+                <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border-strong p-2">
+                  {cookiesDisponiveis.length === 0 && (
+                    <p className="px-1 py-1 text-xs text-neutro-500">
+                      Nenhum cookie cadastrado ainda.
+                    </p>
+                  )}
+                  {cookiesDisponiveis.map((cookie) => (
+                    <label
+                      key={cookie.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-sm text-berinjela hover:bg-berinjela-50"
+                    >
+                      <input
+                        type="checkbox"
+                        name="box_cookies"
+                        value={cookie.id}
+                        checked={cookiesSelecionados.has(cookie.id)}
+                        onChange={() => alternarCookie(cookie.id)}
+                        className="h-4 w-4 accent-rosa"
+                      />
+                      {cookie.nome}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-neutro-500">
+                  O estoque e a disponibilidade da box são calculados a
+                  partir desses cookies — não dá pra editar manualmente.
+                </p>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="receita_id">Receita (ficha técnica)</Label>
@@ -179,12 +252,14 @@ export function ProdutoModal({
                   name="disponivel"
                   defaultChecked={produtoExistente?.disponivel ?? true}
                   className="h-4 w-4 accent-rosa"
+                  disabled={ehBox}
                 />
                 Disponível no site
               </label>
               <p className="mt-1 text-xs text-neutro-500">
-                Fica indisponível sozinho quando o estoque chega a 0 (cada
-                pedido desconta a quantidade vendida).
+                {ehBox
+                  ? "Pra box, isso é automático: fica disponível enquanto algum dos cookies selecionados tiver estoque."
+                  : "Fica indisponível sozinho quando o estoque chega a 0 (cada pedido desconta a quantidade vendida)."}
               </p>
             </div>
           </FieldGroup>

@@ -17,13 +17,18 @@ import {
   STATUS_TONE,
   STATUS_SELECT_CLASSES,
 } from "@/lib/pedido-status";
-import type { PedidoStatus } from "@/lib/types/database";
+import type { PedidoStatus, TipoProduto } from "@/lib/types/database";
 
 type Item = {
+  id: string;
   produto_id: string;
   quantidade: number;
   preco_unitario: number;
-  produtos: { nome: string } | null;
+  produtos: { nome: string; tipo_produto: TipoProduto } | null;
+  pedido_item_composicao: {
+    quantidade: number;
+    produtos: { nome: string } | null;
+  }[];
 };
 
 type Pedido = {
@@ -37,7 +42,12 @@ type Pedido = {
   pedido_itens: Item[];
 };
 
-type Produto = { id: string; nome: string; preco: number };
+type Produto = { id: string; nome: string; preco: number; tipo_produto: TipoProduto };
+
+// itens em edição usam uma "key" local estável em vez do id do banco, porque
+// itens novos (ainda não salvos) não têm id — a key também serve pra evitar
+// colisão de React key quando duas boxes iguais existem no mesmo pedido.
+type ItemEdicao = Omit<Item, "id"> & { id?: string; key: string };
 
 export function PedidoDetalheModal({
   pedido,
@@ -55,7 +65,7 @@ export function PedidoDetalheModal({
   onUpdated: (pedido: Pedido) => void;
 }) {
   const [modoEdicao, setModoEdicao] = useState(false);
-  const [itensEdicao, setItensEdicao] = useState<Item[]>([]);
+  const [itensEdicao, setItensEdicao] = useState<ItemEdicao[]>([]);
   const [observacoesEdicao, setObservacoesEdicao] = useState("");
   const [produtoParaAdicionar, setProdutoParaAdicionar] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -65,7 +75,9 @@ export function PedidoDetalheModal({
 
   function iniciarEdicao() {
     if (!pedido) return;
-    setItensEdicao(pedido.pedido_itens.map((i) => ({ ...i })));
+    setItensEdicao(
+      pedido.pedido_itens.map((i) => ({ ...i, key: i.id }))
+    );
     setObservacoesEdicao(pedido.observacoes ?? "");
     setErro(null);
     setModoEdicao(true);
@@ -76,31 +88,37 @@ export function PedidoDetalheModal({
     setErro(null);
   }
 
-  function alterarQuantidade(produtoId: string, quantidade: number) {
+  function alterarQuantidade(key: string, quantidade: number) {
     setItensEdicao((prev) =>
-      prev.map((i) => (i.produto_id === produtoId ? { ...i, quantidade } : i))
+      prev.map((i) => (i.key === key ? { ...i, quantidade } : i))
     );
   }
 
-  function removerItem(produtoId: string) {
-    setItensEdicao((prev) => prev.filter((i) => i.produto_id !== produtoId));
+  function removerItem(key: string) {
+    setItensEdicao((prev) => prev.filter((i) => i.key !== key));
   }
 
   function adicionarItem() {
     if (!produtoParaAdicionar) return;
     const produto = produtos.find((p) => p.id === produtoParaAdicionar);
     if (!produto) return;
-    if (itensEdicao.some((i) => i.produto_id === produto.id)) {
+    if (
+      itensEdicao.some(
+        (i) => i.produto_id === produto.id && !i.pedido_item_composicao.length
+      )
+    ) {
       setProdutoParaAdicionar("");
       return;
     }
     setItensEdicao((prev) => [
       ...prev,
       {
+        key: crypto.randomUUID(),
         produto_id: produto.id,
         quantidade: 1,
         preco_unitario: produto.preco,
-        produtos: { nome: produto.nome },
+        produtos: { nome: produto.nome, tipo_produto: produto.tipo_produto },
+        pedido_item_composicao: [],
       },
     ]);
     setProdutoParaAdicionar("");
@@ -124,6 +142,7 @@ export function PedidoDetalheModal({
         await atualizarPedido({
           pedidoId: pedido.id,
           itens: itensEdicao.map((i) => ({
+            id: i.id,
             produto_id: i.produto_id,
             quantidade: i.quantidade,
             preco_unitario: i.preco_unitario,
@@ -137,7 +156,14 @@ export function PedidoDetalheModal({
         );
         onUpdated({
           ...pedido,
-          pedido_itens: itensEdicao,
+          pedido_itens: itensEdicao.map((i) => ({
+            id: i.id ?? i.key,
+            produto_id: i.produto_id,
+            quantidade: i.quantidade,
+            preco_unitario: i.preco_unitario,
+            produtos: i.produtos,
+            pedido_item_composicao: i.pedido_item_composicao,
+          })),
           observacoes: observacoesEdicao.trim() || null,
           valor_total: novoValorTotal,
         });
@@ -234,17 +260,23 @@ export function PedidoDetalheModal({
 
             {!modoEdicao ? (
               <ul className="divide-y divide-border rounded-lg border border-border">
-                {pedido.pedido_itens.map((item, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between px-3 py-2 text-sm"
-                  >
-                    <span className="text-berinjela">
-                      {item.quantidade}x {item.produtos?.nome ?? "—"}
-                    </span>
-                    <span className="text-neutro-500">
-                      R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
-                    </span>
+                {pedido.pedido_itens.map((item) => (
+                  <li key={item.id} className="px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-berinjela">
+                        {item.quantidade}x {item.produtos?.nome ?? "—"}
+                      </span>
+                      <span className="text-neutro-500">
+                        R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
+                      </span>
+                    </div>
+                    {item.pedido_item_composicao.length > 0 && (
+                      <p className="mt-0.5 text-xs text-neutro-500">
+                        {item.pedido_item_composicao
+                          .map((c) => `${c.quantidade}x ${c.produtos?.nome ?? "—"}`)
+                          .join(", ")}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -252,33 +284,47 @@ export function PedidoDetalheModal({
               <div className="space-y-2">
                 {itensEdicao.length > 0 && (
                   <ul className="divide-y divide-border rounded-lg border border-border">
-                    {itensEdicao.map((item) => (
-                      <li
-                        key={item.produto_id}
-                        className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                      >
-                        <span className="min-w-0 flex-1 truncate text-berinjela">
-                          {item.produtos?.nome ?? "—"}
-                        </span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={item.quantidade}
-                          onChange={(e) =>
-                            alterarQuantidade(item.produto_id, Number(e.target.value))
-                          }
-                          className="w-16 rounded-md border border-border-strong px-2 py-1 text-sm outline-none focus:border-rosa"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removerItem(item.produto_id)}
-                          aria-label={`Remover ${item.produtos?.nome}`}
-                          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutro-400 transition-colors duration-150 hover:bg-erro-bg hover:text-erro"
-                        >
-                          <X className="h-3.5 w-3.5" strokeWidth={1.75} />
-                        </button>
-                      </li>
-                    ))}
+                    {itensEdicao.map((item) => {
+                      const ehBox = item.pedido_item_composicao.length > 0;
+                      return (
+                        <li key={item.key} className="px-3 py-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 flex-1 truncate text-berinjela">
+                              {item.produtos?.nome ?? "—"}
+                            </span>
+                            {ehBox ? (
+                              <span className="text-neutro-500">{item.quantidade}x</span>
+                            ) : (
+                              <input
+                                type="number"
+                                min={1}
+                                value={item.quantidade}
+                                onChange={(e) =>
+                                  alterarQuantidade(item.key, Number(e.target.value))
+                                }
+                                className="w-16 rounded-md border border-border-strong px-2 py-1 text-sm outline-none focus:border-rosa"
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removerItem(item.key)}
+                              aria-label={`Remover ${item.produtos?.nome}`}
+                              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutro-400 transition-colors duration-150 hover:bg-erro-bg hover:text-erro"
+                            >
+                              <X className="h-3.5 w-3.5" strokeWidth={1.75} />
+                            </button>
+                          </div>
+                          {ehBox && (
+                            <p className="mt-0.5 text-xs text-neutro-500">
+                              {item.pedido_item_composicao
+                                .map((c) => `${c.quantidade}x ${c.produtos?.nome ?? "—"}`)
+                                .join(", ")}{" "}
+                              · composição não editável, só remover ou trocar de item
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
 
@@ -290,7 +336,14 @@ export function PedidoDetalheModal({
                   >
                     <option value="">Adicionar produto...</option>
                     {produtos
-                      .filter((p) => !itensEdicao.some((i) => i.produto_id === p.id))
+                      .filter((p) => p.tipo_produto === "cookie")
+                      .filter(
+                        (p) =>
+                          !itensEdicao.some(
+                            (i) =>
+                              i.produto_id === p.id && !i.pedido_item_composicao.length
+                          )
+                      )
                       .map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.nome} · R$ {p.preco.toFixed(2)}

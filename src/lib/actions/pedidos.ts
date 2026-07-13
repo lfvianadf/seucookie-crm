@@ -9,6 +9,10 @@ export type ItemCarrinho = {
   produto_id: string;
   quantidade: number;
   preco_unitario: number;
+  // só pra itens tipo_produto = 'box': quais cookies (e quantas unidades de
+  // cada) foram escolhidos pra ir dentro dessa box especificamente. É isso
+  // que desconta o estoque de verdade — a box em si não tem estoque próprio.
+  composicao?: { cookieProdutoId: string; quantidade: number }[];
 };
 
 export async function criarPedidoManual(params: {
@@ -51,16 +55,35 @@ export async function criarPedidoManual(params: {
 
   if (error) throw error;
 
-  const { error: itensError } = await supabase.from("pedido_itens").insert(
-    itens.map((item) => ({
-      pedido_id: pedido.id,
-      produto_id: item.produto_id,
-      quantidade: item.quantidade,
-      preco_unitario: item.preco_unitario,
-    }))
-  );
+  // insere um a um (não em lote) porque itens de box precisam do id do
+  // pedido_item recém-criado pra gravar a composição em seguida.
+  for (const item of itens) {
+    const { data: pedidoItem, error: itemError } = await supabase
+      .from("pedido_itens")
+      .insert({
+        pedido_id: pedido.id,
+        produto_id: item.produto_id,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+      })
+      .select("id")
+      .single();
 
-  if (itensError) throw itensError;
+    if (itemError) throw itemError;
+
+    if (item.composicao && item.composicao.length > 0) {
+      const { error: composicaoError } = await supabase
+        .from("pedido_item_composicao")
+        .insert(
+          item.composicao.map((c) => ({
+            pedido_item_id: pedidoItem.id,
+            cookie_produto_id: c.cookieProdutoId,
+            quantidade: c.quantidade,
+          }))
+        );
+      if (composicaoError) throw composicaoError;
+    }
+  }
 
   revalidatePath("/pedidos");
 }
@@ -73,7 +96,7 @@ export async function atualizarStatusPedido(id: string, status: PedidoStatus) {
 
 export async function atualizarPedido(params: {
   pedidoId: string;
-  itens: ItemCarrinho[];
+  itens: (ItemCarrinho & { id?: string })[];
   observacoes?: string;
 }) {
   const { pedidoId, itens, observacoes } = params;
@@ -103,19 +126,17 @@ export async function atualizarPedido(params: {
 
   if (updateError) throw updateError;
 
-  // reconcilia item a item (não apaga tudo e reinsere) — o estoque reage a
-  // cada insert/update/delete individualmente via trigger, então só tocar
-  // no que realmente mudou evita descontar/devolver estoque à toa.
-  const existentesPorProduto = new Map(
-    (itensAtuais ?? []).map((i) => [i.produto_id, i])
-  );
-  const novosPorProduto = new Map(itens.map((i) => [i.produto_id, i]));
+  // reconcilia por id do item (não por produto_id) — um pedido pode ter
+  // duas boxes com o mesmo produto_id e composições diferentes, então
+  // produto_id não identifica um item de forma única. Boxes não são
+  // editáveis aqui (composição fica intocada); só cookies podem ser
+  // adicionados/alterados/removidos na edição.
+  const idsAtuais = new Set((itensAtuais ?? []).map((i) => i.id));
+  const idsNovos = new Set(itens.filter((i) => i.id).map((i) => i.id));
 
-  const paraRemover = (itensAtuais ?? []).filter(
-    (i) => !novosPorProduto.has(i.produto_id)
-  );
-  const paraInserir = itens.filter((i) => !existentesPorProduto.has(i.produto_id));
-  const paraAtualizar = itens.filter((i) => existentesPorProduto.has(i.produto_id));
+  const paraRemover = (itensAtuais ?? []).filter((i) => !idsNovos.has(i.id));
+  const paraInserir = itens.filter((i) => !i.id);
+  const paraAtualizar = itens.filter((i) => i.id && idsAtuais.has(i.id));
 
   if (paraRemover.length > 0) {
     const { error } = await supabase
@@ -129,7 +150,7 @@ export async function atualizarPedido(params: {
   }
 
   for (const item of paraAtualizar) {
-    const existente = existentesPorProduto.get(item.produto_id)!;
+    const existente = (itensAtuais ?? []).find((i) => i.id === item.id)!;
     if (
       existente.quantidade !== item.quantidade ||
       existente.preco_unitario !== item.preco_unitario
@@ -137,7 +158,7 @@ export async function atualizarPedido(params: {
       const { error } = await supabase
         .from("pedido_itens")
         .update({ quantidade: item.quantidade, preco_unitario: item.preco_unitario })
-        .eq("id", existente.id);
+        .eq("id", item.id!);
       if (error) throw error;
     }
   }

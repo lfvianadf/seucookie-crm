@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { TipoProduto } from "@/lib/types/database";
 
 const FOTOS_BUCKET = "seucookie";
 
@@ -27,6 +28,45 @@ async function uploadFoto(
   return publicUrl;
 }
 
+// box não tem estoque próprio — o "cardápio" de cookies que cabem nela é
+// tudo que ela precisa guardar. cookie não deveria ter linhas aqui; limpa
+// pra evitar lixo se o produto foi trocado de box pra cookie. No fim,
+// recalcula disponivel = soma do estoque dos cookies selecionados > 0 — o
+// checkbox "Disponível" vem desabilitado pra box no formulário, então o
+// valor que chegaria pelo form seria sempre falso; isso aqui é que manda.
+async function sincronizarBoxItens(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  produtoId: string,
+  tipoProduto: TipoProduto,
+  formData: FormData
+) {
+  await supabase.from("produto_box_itens").delete().eq("box_id", produtoId);
+
+  if (tipoProduto !== "box") return;
+
+  const cookieIds = formData.getAll("box_cookies").map(String).filter(Boolean);
+  if (cookieIds.length === 0) {
+    await supabase.from("produtos").update({ disponivel: false }).eq("id", produtoId);
+    return;
+  }
+
+  await supabase.from("produto_box_itens").insert(
+    cookieIds.map((cookieId) => ({ box_id: produtoId, cookie_id: cookieId }))
+  );
+
+  const { data: cookies } = await supabase
+    .from("produtos")
+    .select("qtd_estoque")
+    .in("id", cookieIds);
+
+  const somaEstoque = (cookies ?? []).reduce((s, c) => s + c.qtd_estoque, 0);
+
+  await supabase
+    .from("produtos")
+    .update({ disponivel: somaEstoque > 0 })
+    .eq("id", produtoId);
+}
+
 export async function criarProduto(formData: FormData) {
   const supabase = await createClient();
 
@@ -39,22 +79,33 @@ export async function criarProduto(formData: FormData) {
   const receitaId = String(formData.get("receita_id") ?? "").trim() || null;
   const qtdEstoqueRaw = String(formData.get("qtd_estoque") ?? "").trim();
   const qtdEstoque = qtdEstoqueRaw ? Number(qtdEstoqueRaw) : 0;
+  const tipoProduto = (String(formData.get("tipo_produto") ?? "cookie") ||
+    "cookie") as TipoProduto;
 
   if (!nome || Number.isNaN(preco)) return;
 
   const foto_url = await uploadFoto(supabase, formData.get("foto"));
 
-  await supabase.from("produtos").insert({
-    nome,
-    preco,
-    capitulo,
-    descricao,
-    disponivel,
-    qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
-    foto_url,
-    receita_id: receitaId,
-    numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
-  });
+  const { data: produto, error } = await supabase
+    .from("produtos")
+    .insert({
+      nome,
+      preco,
+      capitulo,
+      descricao,
+      disponivel,
+      qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
+      tipo_produto: tipoProduto,
+      foto_url,
+      receita_id: receitaId,
+      numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  await sincronizarBoxItens(supabase, produto.id, tipoProduto, formData);
 
   revalidatePath("/produtos");
 }
@@ -71,12 +122,14 @@ export async function atualizarProduto(id: string, formData: FormData) {
   const receitaId = String(formData.get("receita_id") ?? "").trim() || null;
   const qtdEstoqueRaw = String(formData.get("qtd_estoque") ?? "").trim();
   const qtdEstoque = qtdEstoqueRaw ? Number(qtdEstoqueRaw) : 0;
+  const tipoProduto = (String(formData.get("tipo_produto") ?? "cookie") ||
+    "cookie") as TipoProduto;
 
   if (!nome || Number.isNaN(preco)) return;
 
   const foto_url = await uploadFoto(supabase, formData.get("foto"));
 
-  await supabase
+  const { error } = await supabase
     .from("produtos")
     .update({
       nome,
@@ -85,11 +138,16 @@ export async function atualizarProduto(id: string, formData: FormData) {
       descricao,
       disponivel,
       qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
+      tipo_produto: tipoProduto,
       receita_id: receitaId,
       numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
       ...(foto_url ? { foto_url } : {}),
     })
     .eq("id", id);
+
+  if (error) throw error;
+
+  await sincronizarBoxItens(supabase, id, tipoProduto, formData);
 
   revalidatePath("/produtos");
 }

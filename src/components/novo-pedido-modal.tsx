@@ -7,15 +7,25 @@ import { Modal } from "@/components/modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { NovoPedidoForm } from "@/components/novo-pedido-form";
+import type { TipoProduto } from "@/lib/types/database";
 
 type Produto = {
   id: string;
   nome: string;
   preco: number;
   capitulo: string | null;
+  tipo_produto: TipoProduto;
 };
 
-export function NovoPedidoModal({ produtos }: { produtos: Produto[] }) {
+type BoxCookies = Record<string, { id: string; nome: string; preco: number }[]>;
+
+export function NovoPedidoModal({
+  produtos,
+  boxCookies,
+}: {
+  produtos: Produto[];
+  boxCookies: BoxCookies;
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const toast = useToast();
@@ -36,6 +46,7 @@ export function NovoPedidoModal({ produtos }: { produtos: Produto[] }) {
       >
         <NovoPedidoForm
           produtos={produtos}
+          boxCookies={boxCookies}
           onSuccess={() => {
             setOpen(false);
             toast("Pedido criado");

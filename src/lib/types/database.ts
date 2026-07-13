@@ -17,6 +17,8 @@ export type NotaFiscalStatus =
 
 export type EntregaStatus = "pendente" | "saiu" | "entregue";
 
+export type TipoProduto = "cookie" | "box";
+
 export interface Database {
   public: {
     Tables: {
@@ -29,6 +31,7 @@ export interface Database {
           preco: number;
           disponivel: boolean;
           qtd_estoque: number;
+          tipo_produto: TipoProduto;
           capitulo: string | null;
           foto_url: string | null;
           receita_id: string | null;
@@ -43,6 +46,7 @@ export interface Database {
           preco: number;
           disponivel?: boolean;
           qtd_estoque?: number;
+          tipo_produto?: TipoProduto;
           capitulo?: string | null;
           foto_url?: string | null;
           receita_id?: string | null;
@@ -143,6 +147,68 @@ export interface Database {
           {
             foreignKeyName: "pedido_itens_produto_id_fkey";
             columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      produto_box_itens: {
+        Row: {
+          box_id: string;
+          cookie_id: string;
+        };
+        Insert: {
+          box_id: string;
+          cookie_id: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["produto_box_itens"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "produto_box_itens_box_id_fkey";
+            columns: ["box_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "produto_box_itens_cookie_id_fkey";
+            columns: ["cookie_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pedido_item_composicao: {
+        Row: {
+          id: string;
+          pedido_item_id: string;
+          cookie_produto_id: string;
+          quantidade: number;
+        };
+        Insert: {
+          id?: string;
+          pedido_item_id: string;
+          cookie_produto_id: string;
+          quantidade: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["pedido_item_composicao"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "pedido_item_composicao_pedido_item_id_fkey";
+            columns: ["pedido_item_id"];
+            isOneToOne: false;
+            referencedRelation: "pedido_itens";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pedido_item_composicao_cookie_produto_id_fkey";
+            columns: ["cookie_produto_id"];
             isOneToOne: false;
             referencedRelation: "produtos";
             referencedColumns: ["id"];
