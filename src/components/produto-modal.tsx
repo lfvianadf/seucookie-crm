@@ -20,6 +20,7 @@ type ProdutoExistente = {
   capitulo: string | null;
   descricao: string | null;
   disponivel: boolean;
+  qtd_estoque: number;
   foto_url: string | null;
   receita_id: string | null;
 };
@@ -124,13 +125,25 @@ export function ProdutoModal({
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="capitulo">Capítulo</Label>
-              <Input
-                id="capitulo"
-                name="capitulo"
-                defaultValue={produtoExistente?.capitulo ?? ""}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="capitulo">Capítulo</Label>
+                <Input
+                  id="capitulo"
+                  name="capitulo"
+                  defaultValue={produtoExistente?.capitulo ?? ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="qtd_estoque">Estoque (cookies)</Label>
+                <Input
+                  id="qtd_estoque"
+                  name="qtd_estoque"
+                  type="number"
+                  min={0}
+                  defaultValue={produtoExistente?.qtd_estoque ?? 0}
+                />
+              </div>
             </div>
 
             <div>
@@ -159,15 +172,21 @@ export function ProdutoModal({
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-berinjela">
-              <input
-                type="checkbox"
-                name="disponivel"
-                defaultChecked={produtoExistente?.disponivel ?? true}
-                className="h-4 w-4 accent-rosa"
-              />
-              Disponível no site
-            </label>
+            <div>
+              <label className="flex items-center gap-2 text-sm text-berinjela">
+                <input
+                  type="checkbox"
+                  name="disponivel"
+                  defaultChecked={produtoExistente?.disponivel ?? true}
+                  className="h-4 w-4 accent-rosa"
+                />
+                Disponível no site
+              </label>
+              <p className="mt-1 text-xs text-neutro-500">
+                Fica indisponível sozinho quando o estoque chega a 0 (cada
+                pedido desconta a quantidade vendida).
+              </p>
+            </div>
           </FieldGroup>
 
           <div className="flex justify-end gap-2 border-t border-border pt-5">

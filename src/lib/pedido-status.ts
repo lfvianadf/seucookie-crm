@@ -36,3 +36,10 @@ export const STATUS_COLUNA_ACCENT: Record<PedidoStatus, string> = {
   entregue: "border-t-salvia",
   cancelado: "border-t-erro",
 };
+
+export const STATUS_SELECT_CLASSES: Record<BadgeTone, string> = {
+  neutral: "bg-berinjela-50 text-neutro-700",
+  salvia: "bg-salvia-bg text-salvia-text",
+  atencao: "bg-atencao-bg text-atencao-text",
+  erro: "bg-erro-bg text-erro-text",
+};

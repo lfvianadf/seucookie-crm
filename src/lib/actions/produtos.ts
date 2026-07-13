@@ -37,6 +37,8 @@ export async function criarProduto(formData: FormData) {
   const descricao = String(formData.get("descricao") ?? "").trim() || null;
   const disponivel = formData.get("disponivel") === "on";
   const receitaId = String(formData.get("receita_id") ?? "").trim() || null;
+  const qtdEstoqueRaw = String(formData.get("qtd_estoque") ?? "").trim();
+  const qtdEstoque = qtdEstoqueRaw ? Number(qtdEstoqueRaw) : 0;
 
   if (!nome || Number.isNaN(preco)) return;
 
@@ -48,6 +50,7 @@ export async function criarProduto(formData: FormData) {
     capitulo,
     descricao,
     disponivel,
+    qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
     foto_url,
     receita_id: receitaId,
     numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
@@ -66,6 +69,8 @@ export async function atualizarProduto(id: string, formData: FormData) {
   const descricao = String(formData.get("descricao") ?? "").trim() || null;
   const disponivel = formData.get("disponivel") === "on";
   const receitaId = String(formData.get("receita_id") ?? "").trim() || null;
+  const qtdEstoqueRaw = String(formData.get("qtd_estoque") ?? "").trim();
+  const qtdEstoque = qtdEstoqueRaw ? Number(qtdEstoqueRaw) : 0;
 
   if (!nome || Number.isNaN(preco)) return;
 
@@ -79,6 +84,7 @@ export async function atualizarProduto(id: string, formData: FormData) {
       capitulo,
       descricao,
       disponivel,
+      qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
       receita_id: receitaId,
       numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
       ...(foto_url ? { foto_url } : {}),

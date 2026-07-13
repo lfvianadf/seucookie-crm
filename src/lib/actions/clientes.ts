@@ -41,6 +41,21 @@ export async function buscarClientePorTelefone(telefone: string) {
   return data;
 }
 
+export async function buscarClientesPorNome(nome: string) {
+  const termo = nome.trim();
+  if (termo.length < 2) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("clientes")
+    .select("id, nome, telefone, endereco")
+    .ilike("nome", `%${termo}%`)
+    .order("nome")
+    .limit(6);
+
+  return data ?? [];
+}
+
 export async function criarCliente(formData: FormData) {
   const nome = String(formData.get("nome") ?? "").trim();
   const telefone = String(formData.get("telefone") ?? "").trim();

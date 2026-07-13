@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Search, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { NovoClienteModal } from "@/components/novo-cliente-modal";
@@ -72,7 +73,12 @@ export default async function ClientesPage({
                   className="border-b border-border transition-colors duration-150 last:border-0 hover:bg-berinjela-50/60"
                 >
                   <td className="px-4 py-3 font-medium text-berinjela">
-                    {cliente.nome}
+                    <Link
+                      href={`/clientes/${cliente.id}`}
+                      className="hover:underline underline-offset-2"
+                    >
+                      {cliente.nome}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-neutro-700">{cliente.telefone}</td>
                   <td className="px-4 py-3 text-neutro-500">

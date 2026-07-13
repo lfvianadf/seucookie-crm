@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Cookie,
   ClipboardList,
+  Users,
   Package,
   Truck,
   X,
@@ -18,6 +19,7 @@ const LINKS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/produtos", label: "Cardápio", icon: Cookie },
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
+  { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/insumos", label: "Insumos", icon: Package },
   { href: "/entregas", label: "Entregas", icon: Truck },
 ];

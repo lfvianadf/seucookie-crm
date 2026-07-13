@@ -2,19 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { MapPin } from "lucide-react";
 import { atualizarStatusPedido } from "@/lib/actions/pedidos";
 import { useToast } from "@/components/ui/toast";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { PedidoDetalheModal } from "@/components/pedido-detalhe-modal";
 import {
   STATUS_ORDEM,
   STATUS_LABEL,
-  STATUS_TONE,
   STATUS_COLUNA_ACCENT,
 } from "@/lib/pedido-status";
 import type { PedidoStatus } from "@/lib/types/database";
 
 type Item = {
+  produto_id: string;
   quantidade: number;
   preco_unitario: number;
   produtos: { nome: string } | null;
@@ -31,14 +31,15 @@ type Pedido = {
   pedido_itens: Item[];
 };
 
-const TONE_SELECT_CLASSES: Record<BadgeTone, string> = {
-  neutral: "bg-berinjela-50 text-neutro-700",
-  salvia: "bg-salvia-bg text-salvia-text",
-  atencao: "bg-atencao-bg text-atencao-text",
-  erro: "bg-erro-bg text-erro-text",
-};
+type Produto = { id: string; nome: string; preco: number };
 
-export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }) {
+export function PedidosKanban({
+  pedidosIniciais,
+  produtos,
+}: {
+  pedidosIniciais: Pedido[];
+  produtos: Produto[];
+}) {
   const [pedidos, setPedidos] = useState(pedidosIniciais);
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [colunaAlvo, setColunaAlvo] = useState<PedidoStatus | null>(null);
@@ -94,58 +95,45 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
             </div>
 
             <div className="flex min-h-16 flex-1 flex-col gap-2 px-2 pb-2">
-              {itens.map((pedido) => (
-                <div
-                  key={pedido.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("text/plain", pedido.id);
-                    setArrastando(pedido.id);
-                  }}
-                  onDragEnd={() => setArrastando(null)}
-                  onClick={() => setPedidoSelecionadoId(pedido.id)}
-                  className={`cursor-pointer rounded-lg border border-border bg-white p-3 shadow-sm transition-all duration-150 ease-out hover:shadow-md active:cursor-grabbing ${
-                    arrastando === pedido.id ? "opacity-40" : ""
-                  }`}
-                >
-                  <div className="mb-1 flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-berinjela">
-                      {pedido.clientes?.nome ?? "—"}
-                    </p>
-                    <span className="shrink-0 text-xs font-semibold text-berinjela">
-                      R$ {Number(pedido.valor_total).toFixed(2)}
-                    </span>
+              {itens.map((pedido) => {
+                const resumoItens = pedido.pedido_itens
+                  .map((item) => `${item.quantidade}x ${item.produtos?.nome ?? "—"}`)
+                  .join(", ");
+
+                return (
+                  <div
+                    key={pedido.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", pedido.id);
+                      setArrastando(pedido.id);
+                    }}
+                    onDragEnd={() => setArrastando(null)}
+                    onClick={() => setPedidoSelecionadoId(pedido.id)}
+                    className={`cursor-pointer rounded-lg border border-border bg-white p-3 shadow-sm transition-all duration-150 ease-out hover:shadow-md active:cursor-grabbing ${
+                      arrastando === pedido.id ? "opacity-40" : ""
+                    }`}
+                  >
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium text-berinjela">
+                        {pedido.clientes?.nome ?? "—"}
+                      </p>
+                      <span className="shrink-0 text-xs font-semibold text-berinjela">
+                        R$ {Number(pedido.valor_total).toFixed(2)}
+                      </span>
+                    </div>
+                    {resumoItens && (
+                      <p className="mb-1 text-xs text-neutro-600">{resumoItens}</p>
+                    )}
+                    {pedido.clientes?.endereco && (
+                      <p className="flex items-center gap-1 text-xs text-neutro-500">
+                        <MapPin className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+                        <span className="truncate">{pedido.clientes.endereco}</span>
+                      </p>
+                    )}
                   </div>
-                  <p className="mb-2 text-xs text-neutro-500">
-                    {pedido.clientes?.telefone ?? "—"} ·{" "}
-                    {new Date(pedido.data_pedido).toLocaleDateString("pt-BR")}
-                  </p>
-                  {pedido.observacoes && (
-                    <p className="mb-2 truncate text-xs text-neutro-500">
-                      {pedido.observacoes}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge tone="neutral" className="uppercase tracking-wide">
-                      {pedido.origem}
-                    </Badge>
-                    <select
-                      value={pedido.status}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) =>
-                        moverPedido(pedido.id, e.target.value as PedidoStatus)
-                      }
-                      className={`cursor-pointer rounded-md border-0 px-2 py-1 text-xs font-medium outline-none transition-colors duration-150 ${TONE_SELECT_CLASSES[STATUS_TONE[pedido.status]]}`}
-                    >
-                      {STATUS_ORDEM.map((value) => (
-                        <option key={value} value={value}>
-                          {STATUS_LABEL[value]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {!itens.length && (
                 <p className="px-2 py-6 text-center text-xs text-neutro-400">
                   Nenhum pedido
@@ -158,7 +146,18 @@ export function PedidosKanban({ pedidosIniciais }: { pedidosIniciais: Pedido[] }
 
       <PedidoDetalheModal
         pedido={pedidoSelecionado}
+        produtos={produtos}
+        onStatusChange={moverPedido}
         onClose={() => setPedidoSelecionadoId(null)}
+        onDeleted={(id) => {
+          setPedidos((prev) => prev.filter((p) => p.id !== id));
+          setPedidoSelecionadoId(null);
+        }}
+        onUpdated={(pedidoAtualizado) => {
+          setPedidos((prev) =>
+            prev.map((p) => (p.id === pedidoAtualizado.id ? pedidoAtualizado : p))
+          );
+        }}
       />
     </div>
   );

@@ -28,6 +28,7 @@ export interface Database {
           descricao: string | null;
           preco: number;
           disponivel: boolean;
+          qtd_estoque: number;
           capitulo: string | null;
           foto_url: string | null;
           receita_id: string | null;
@@ -41,6 +42,7 @@ export interface Database {
           descricao?: string | null;
           preco: number;
           disponivel?: boolean;
+          qtd_estoque?: number;
           capitulo?: string | null;
           foto_url?: string | null;
           receita_id?: string | null;

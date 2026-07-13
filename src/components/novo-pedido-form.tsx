@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { X, AlertCircle, CheckCircle2 } from "lucide-react";
 import { criarPedidoManual, type ItemCarrinho } from "@/lib/actions/pedidos";
-import { buscarClientePorTelefone } from "@/lib/actions/clientes";
+import {
+  buscarClientePorTelefone,
+  buscarClientesPorNome,
+} from "@/lib/actions/clientes";
 import { Label, Input, Textarea } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +15,13 @@ type Produto = {
   nome: string;
   preco: number;
   capitulo: string | null;
+};
+
+type ClienteSugestao = {
+  id: string;
+  nome: string;
+  telefone: string;
+  endereco: string | null;
 };
 
 export function NovoPedidoForm({
@@ -29,6 +39,9 @@ export function NovoPedidoForm({
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [sugestoesNome, setSugestoesNome] = useState<ClienteSugestao[]>([]);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function handleTelefoneBlur() {
     if (!telefone.trim()) return;
@@ -40,6 +53,34 @@ export function NovoPedidoForm({
     } else {
       setClienteEncontrado(false);
     }
+  }
+
+  function handleNomeChange(value: string) {
+    setNomeCliente(value);
+    setClienteEncontrado(false);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.trim().length < 2) {
+      setSugestoesNome([]);
+      setMostrarSugestoes(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      const resultados = await buscarClientesPorNome(value);
+      setSugestoesNome(resultados);
+      setMostrarSugestoes(resultados.length > 0);
+    }, 300);
+  }
+
+  function selecionarSugestao(cliente: ClienteSugestao) {
+    setNomeCliente(cliente.nome);
+    setTelefone(cliente.telefone);
+    setEnderecoCliente(cliente.endereco ?? "");
+    setClienteEncontrado(true);
+    setMostrarSugestoes(false);
+    setSugestoesNome([]);
   }
 
   function adicionarItem(produtoId: string) {
@@ -126,13 +167,32 @@ export function NovoPedidoForm({
                 autoFocus
               />
             </div>
-            <div>
+            <div className="relative">
               <Label htmlFor="pedido-nome">Nome</Label>
               <Input
                 id="pedido-nome"
                 value={nomeCliente}
-                onChange={(e) => setNomeCliente(e.target.value)}
+                onChange={(e) => handleNomeChange(e.target.value)}
+                onFocus={() => sugestoesNome.length > 0 && setMostrarSugestoes(true)}
+                onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+                autoComplete="off"
               />
+              {mostrarSugestoes && (
+                <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-white shadow-modal">
+                  {sugestoesNome.map((cliente) => (
+                    <li key={cliente.id}>
+                      <button
+                        type="button"
+                        onMouseDown={() => selecionarSugestao(cliente)}
+                        className="flex w-full flex-col items-start px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-berinjela-50"
+                      >
+                        <span className="font-medium text-berinjela">{cliente.nome}</span>
+                        <span className="text-xs text-neutro-500">{cliente.telefone}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="pedido-endereco">Endereço (opcional)</Label>

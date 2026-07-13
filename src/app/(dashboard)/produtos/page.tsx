@@ -93,6 +93,14 @@ export default async function ProdutosPage() {
                 <p className="mb-2.5 text-xs text-neutro-500">
                   {produto.capitulo ?? "—"}
                   {produto.numero_receita ? ` · nº ${produto.numero_receita}` : ""}
+                  {" · "}
+                  <span
+                    className={
+                      produto.qtd_estoque <= 0 ? "font-medium text-erro-text" : undefined
+                    }
+                  >
+                    {produto.qtd_estoque} em estoque
+                  </span>
                 </p>
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-semibold text-berinjela">
