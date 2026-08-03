@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Factory } from "lucide-react";
+import { ChevronLeft, Factory, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { EntradaInsumoModal } from "@/components/entrada-insumo-modal";
+import { Button } from "@/components/ui/button";
 import { UNIDADE_GRANDE } from "@/lib/unidade";
 
 export default async function InsumoDetalhePage({
@@ -54,7 +56,18 @@ export default async function InsumoDetalhePage({
         Insumos
       </Link>
 
-      <h1 className="mb-1 text-2xl font-semibold text-berinjela">{insumo.nome}</h1>
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-berinjela">{insumo.nome}</h1>
+        <EntradaInsumoModal
+          insumo={insumo}
+          trigger={
+            <Button variant="secondary" className="min-h-11">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Entrada
+            </Button>
+          }
+        />
+      </div>
       <p className="mb-6 text-sm text-neutro-500">
         Estoque atual: {Number(insumo.estoque_atual).toLocaleString("pt-BR")}{" "}
         {insumo.unidade_base} · Custo médio: R${" "}
@@ -72,8 +85,8 @@ export default async function InsumoDetalhePage({
       </p>
 
       {producoesComConsumo.length ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border bg-white">
+          <table className="w-full min-w-[36rem] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="px-4 py-3 text-xs font-semibold text-neutro-500">

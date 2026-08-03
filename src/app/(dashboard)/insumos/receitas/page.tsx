@@ -6,6 +6,7 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { calcularCustoReceita } from "@/lib/receita-custo";
 
 export default async function ReceitasPage() {
@@ -41,24 +42,21 @@ export default async function ReceitasPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="mb-1 text-2xl font-semibold text-berinjela">Receitas</h1>
-          <p className="text-sm text-neutro-500">
-            Ficha técnica: custo por cookie e quanto dá pra fazer com o
-            estoque de hoje.
-          </p>
-        </div>
-        <ReceitaModal
-          insumos={insumosLista}
-          trigger={
-            <Button>
-              <Plus className="h-4 w-4" strokeWidth={2} />
-              Nova receita
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title="Receitas"
+        description="Ficha técnica: custo por cookie e quanto dá pra fazer com o estoque de hoje."
+        action={
+          <ReceitaModal
+            insumos={insumosLista}
+            trigger={
+              <Button className="w-full sm:w-auto">
+                <Plus className="h-4 w-4" strokeWidth={2} />
+                Nova receita
+              </Button>
+            }
+          />
+        }
+      />
 
       {receitasComCalculo.length ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

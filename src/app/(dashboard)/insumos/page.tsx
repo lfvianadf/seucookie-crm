@@ -3,10 +3,12 @@ import { Package, Pencil, Plus, Receipt, TrendingUp, TrendingDown } from "lucide
 import { createClient } from "@/lib/supabase/server";
 import { excluirInsumo } from "@/lib/actions/insumos";
 import { InsumoModal } from "@/components/insumo-modal";
+import { EntradaInsumoModal } from "@/components/entrada-insumo-modal";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { UNIDADE_GRANDE } from "@/lib/unidade";
 
 export default async function InsumosPage() {
@@ -18,41 +20,94 @@ export default async function InsumosPage() {
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
-        <div>
-          <h1 className="mb-1 text-2xl font-semibold text-berinjela">Insumos</h1>
-          <p className="text-sm text-neutro-500">
-            Matéria-prima, estoque e custo médio por unidade.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/insumos/notas">
-            <Button variant="secondary">
-              <Receipt className="h-4 w-4" strokeWidth={1.75} />
-              Notas fiscais
-            </Button>
-          </Link>
-          <InsumoModal
-            trigger={
-              <Button>
-                <Plus className="h-4 w-4" strokeWidth={2} />
-                Novo insumo
+      <PageHeader
+        title="Estoque"
+        description="Matéria-prima, estoque e custo médio por unidade."
+        action={
+          <>
+            <Link href="/insumos/notas" className="flex-1 sm:flex-none">
+              <Button variant="secondary" className="w-full">
+                <Receipt className="h-4 w-4" strokeWidth={1.75} />
+                Notas fiscais
               </Button>
-            }
-          />
-        </div>
-      </div>
-
-      <p className="mb-6 text-xs text-neutro-500">
-        Estoque e custo médio são atualizados a partir das{" "}
-        <Link href="/insumos/notas" className="underline underline-offset-2">
-          notas fiscais
-        </Link>{" "}
-        confirmadas.
-      </p>
+            </Link>
+            <InsumoModal
+              trigger={
+                <Button className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4" strokeWidth={2} />
+                  Novo insumo
+                </Button>
+              }
+            />
+          </>
+        }
+      />
 
       {insumos?.length ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <>
+        {/* mobile: lista de cards, sem tabela larga rolando de lado */}
+        <div className="space-y-2 md:hidden">
+          {insumos.map((insumo) => (
+            <div
+              key={insumo.id}
+              className="rounded-xl border border-border bg-white p-3"
+            >
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <Link
+                  href={`/insumos/${insumo.id}`}
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-berinjela"
+                >
+                  {insumo.nome}
+                </Link>
+                <span
+                  className={`shrink-0 text-sm font-semibold ${
+                    Number(insumo.estoque_atual) <= 0
+                      ? "text-erro-text"
+                      : "text-berinjela"
+                  }`}
+                >
+                  {Number(insumo.estoque_atual).toLocaleString("pt-BR")}{" "}
+                  {insumo.unidade_base}
+                </span>
+              </div>
+              <p className="mb-3 text-xs text-neutro-500">
+                R$ {Number(insumo.custo_medio_por_unidade).toFixed(2)} /{" "}
+                {UNIDADE_GRANDE[insumo.unidade_base]} (médio) · R${" "}
+                {Number(insumo.preco_atual).toFixed(2)} (última compra)
+              </p>
+              <div className="flex items-center gap-2 border-t border-border pt-2">
+                <EntradaInsumoModal
+                  insumo={insumo}
+                  trigger={
+                    <Button variant="secondary" className="min-h-11 flex-1">
+                      <Plus className="h-4 w-4" strokeWidth={2} />
+                      Entrada
+                    </Button>
+                  }
+                />
+                <InsumoModal
+                  insumoExistente={insumo}
+                  trigger={
+                    <IconButton
+                      aria-label={`Editar ${insumo.nome}`}
+                      title="Editar"
+                      size="toque"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                    </IconButton>
+                  }
+                />
+                <ConfirmDeleteButton
+                  itemName={insumo.nome}
+                  size="toque"
+                  onConfirm={excluirInsumo.bind(null, insumo.id)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-xl border border-border bg-white md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
@@ -89,7 +144,13 @@ export default async function InsumosPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-neutro-500">{insumo.unidade_base}</td>
-                  <td className="px-4 py-3 text-right text-neutro-700">
+                  <td
+                    className={`px-4 py-3 text-right font-medium ${
+                      Number(insumo.estoque_atual) <= 0
+                        ? "text-erro-text"
+                        : "text-berinjela"
+                    }`}
+                  >
                     {Number(insumo.estoque_atual).toLocaleString("pt-BR")}{" "}
                     {insumo.unidade_base}
                   </td>
@@ -112,6 +173,17 @@ export default async function InsumosPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                      <EntradaInsumoModal
+                        insumo={insumo}
+                        trigger={
+                          <IconButton
+                            aria-label={`Registrar entrada de ${insumo.nome}`}
+                            title="Registrar entrada (compra)"
+                          >
+                            <Plus className="h-4 w-4" strokeWidth={2} />
+                          </IconButton>
+                        }
+                      />
                       <InsumoModal
                         insumoExistente={insumo}
                         trigger={
@@ -134,6 +206,7 @@ export default async function InsumosPage() {
             </tbody>
           </table>
         </div>
+        </>
       ) : (
         <EmptyState
           icon={Package}

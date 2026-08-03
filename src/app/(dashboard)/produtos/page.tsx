@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { calcularCustoReceita } from "@/lib/receita-custo";
+import { ESTOQUE_BAIXO } from "@/lib/estoque";
 
 export default async function ProdutosPage() {
   const supabase = await createClient();
@@ -42,24 +44,22 @@ export default async function ProdutosPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="mb-1 text-2xl font-semibold text-berinjela">Cardápio</h1>
-          <p className="text-sm text-neutro-500">
-            Fonte única do cardápio. O site só lê o que está disponível aqui.
-          </p>
-        </div>
-        <ProdutoModal
-          receitas={receitasLista}
-          cookiesDisponiveis={cookiesLista}
-          trigger={
-            <Button>
-              <Plus className="h-4 w-4" strokeWidth={2} />
-              Novo produto
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title="Cardápio"
+        description="Fonte única do cardápio. O site só lê o que está disponível aqui."
+        action={
+          <ProdutoModal
+            receitas={receitasLista}
+            cookiesDisponiveis={cookiesLista}
+            trigger={
+              <Button className="w-full sm:w-auto">
+                <Plus className="h-4 w-4" strokeWidth={2} />
+                Novo produto
+              </Button>
+            }
+          />
+        }
+      />
 
       {produtosLista.length ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -127,7 +127,11 @@ export default async function ProdutosPage() {
                     {" · "}
                     <span
                       className={
-                        estoqueExibido <= 0 ? "font-medium text-erro-text" : undefined
+                        estoqueExibido <= 0
+                          ? "font-medium text-erro-text"
+                          : estoqueExibido <= ESTOQUE_BAIXO
+                            ? "font-medium text-atencao-text"
+                            : undefined
                       }
                     >
                       {estoqueExibido} em estoque

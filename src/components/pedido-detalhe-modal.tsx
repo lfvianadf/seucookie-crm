@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Phone, MapPin, Pencil, X, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +69,6 @@ export function PedidoDetalheModal({
   const [produtoParaAdicionar, setProdutoParaAdicionar] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   function iniciarEdicao() {
@@ -169,7 +167,6 @@ export function PedidoDetalheModal({
         });
         toast("Pedido atualizado, estoque ajustado");
         setModoEdicao(false);
-        router.refresh();
       } catch {
         setErro("Não foi possível salvar. Tente novamente.");
       }

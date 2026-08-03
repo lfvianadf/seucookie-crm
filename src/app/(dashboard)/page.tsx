@@ -1,23 +1,31 @@
 import Link from "next/link";
-import { ClipboardList, Factory, Wallet, Cookie } from "lucide-react";
+import { ClipboardList, Factory, Wallet, Cookie, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/pedido-status";
+import { ESTOQUE_BAIXO } from "@/lib/estoque";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: pedidos }, { data: producoes }] = await Promise.all([
-    supabase
-      .from("pedidos")
-      .select("id, status, valor_total, data_pedido, clientes(nome)")
-      .order("data_pedido", { ascending: false }),
-    supabase
-      .from("producoes")
-      .select("id, quantidade_produzida, data, receitas(nome), produtos(nome)")
-      .order("data", { ascending: false }),
-  ]);
+  const [{ data: pedidos }, { data: producoes }, { data: produtos }] =
+    await Promise.all([
+      supabase
+        .from("pedidos")
+        .select("id, status, valor_total, data_pedido, clientes(nome)")
+        .order("data_pedido", { ascending: false }),
+      supabase
+        .from("producoes")
+        .select("id, quantidade_produzida, data, receitas(nome), produtos(nome)")
+        .order("data", { ascending: false }),
+      supabase
+        .from("produtos")
+        .select("id, nome, qtd_estoque, tipo_produto")
+        .eq("tipo_produto", "cookie")
+        .order("qtd_estoque", { ascending: true }),
+    ]);
 
   const inicioMes = new Date();
   inicioMes.setDate(1);
@@ -44,25 +52,33 @@ export default async function DashboardPage() {
   const pedidosRecentes = pedidosLista.slice(0, 6);
   const producaoRecente = producoesLista.slice(0, 6);
 
+  // o que exige ação hoje: cookie sem estoque nenhum ou perto de acabar.
+  // Já vem ordenado do banco pelo menor estoque, então o mais urgente
+  // aparece primeiro sem precisar reordenar aqui.
+  const precisaAssar = (produtos ?? []).filter(
+    (p) => p.qtd_estoque <= ESTOQUE_BAIXO
+  );
+  const zerados = precisaAssar.filter((p) => p.qtd_estoque <= 0).length;
+
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold text-berinjela">Dashboard</h1>
-      <p className="mb-6 text-sm text-neutro-500">
-        Visão geral de pedidos e produção.
-      </p>
+      <PageHeader title="Dashboard" description="Visão geral de pedidos e produção." />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatTile
           label="Pedidos recebidos"
           value={String(pedidosNovos)}
           icon={ClipboardList}
           hint="aguardando produção"
+          href="/pedidos"
+          tone={pedidosNovos > 0 ? "atencao" : "neutral"}
         />
         <StatTile
           label="Em produção"
           value={String(pedidosEmProducao)}
           icon={Factory}
           hint="pedidos na fila"
+          href="/pedidos"
         />
         <StatTile
           label="Faturamento do mês"
@@ -75,8 +91,48 @@ export default async function DashboardPage() {
           value={cookiesMes.toLocaleString("pt-BR")}
           icon={Cookie}
           hint="neste mês"
+          href="/insumos/producao"
         />
       </div>
+
+      {precisaAssar.length > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-white">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <AlertTriangle
+                className={`h-4 w-4 shrink-0 ${zerados > 0 ? "text-erro" : "text-atencao"}`}
+                strokeWidth={1.75}
+              />
+              <h2 className="truncate text-sm font-semibold text-berinjela">
+                Precisa assar
+              </h2>
+            </div>
+            <Link
+              href="/insumos/producao"
+              className="shrink-0 text-xs text-neutro-500 underline underline-offset-2 hover:text-berinjela"
+            >
+              registrar produção
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2 px-4 py-3">
+            {precisaAssar.map((produto) => (
+              <span
+                key={produto.id}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium ${
+                  produto.qtd_estoque <= 0
+                    ? "bg-erro-bg text-erro-text"
+                    : "bg-atencao-bg text-atencao-text"
+                }`}
+              >
+                {produto.nome}
+                <span className="opacity-70">
+                  {produto.qtd_estoque <= 0 ? "esgotado" : produto.qtd_estoque}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-white">

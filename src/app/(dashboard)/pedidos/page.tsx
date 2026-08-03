@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PedidosKanban } from "@/components/pedidos-kanban";
 import { NovoPedidoModal } from "@/components/novo-pedido-modal";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function PedidosPage() {
   const supabase = await createClient();
@@ -40,15 +41,13 @@ export default async function PedidosPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="mb-1 text-2xl font-semibold text-berinjela">Pedidos</h1>
-          <p className="text-sm text-neutro-500">
-            Arraste o cartão pra mudar o status, ou use o seletor.
-          </p>
-        </div>
-        <NovoPedidoModal produtos={produtosLista} boxCookies={boxCookies} />
-      </div>
+      <PageHeader
+        title="Pedidos"
+        description="Arraste o cartão pra mudar o status, ou use o seletor."
+        action={
+          <NovoPedidoModal produtos={produtosLista} boxCookies={boxCookies} />
+        }
+      />
 
       <PedidosKanban pedidosIniciais={pedidos ?? []} produtos={produtosLista} />
     </div>
