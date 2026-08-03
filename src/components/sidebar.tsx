@@ -9,7 +9,8 @@ import {
   ClipboardList,
   Users,
   Package,
-  Truck,
+  BookOpen,
+  Factory,
   X,
 } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
@@ -20,9 +21,20 @@ const LINKS = [
   { href: "/produtos", label: "Cardápio", icon: Cookie },
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/insumos", label: "Insumos", icon: Package },
-  { href: "/entregas", label: "Entregas", icon: Truck },
+  { href: "/insumos", label: "Estoque", icon: Package },
+  { href: "/insumos/receitas", label: "Receitas", icon: BookOpen },
+  { href: "/insumos/producao", label: "Produções", icon: Factory },
 ];
+
+// o link ativo é o de href mais longo que casa com a rota atual — sem isso
+// /insumos ficaria aceso junto de /insumos/receitas.
+function hrefAtivo(pathname: string | null) {
+  if (!pathname) return null;
+  if (pathname === "/") return "/";
+  return LINKS.filter((l) => l.href !== "/" && pathname.startsWith(l.href)).sort(
+    (a, b) => b.href.length - a.href.length
+  )[0]?.href;
+}
 
 export function Sidebar({
   userEmail,
@@ -34,6 +46,7 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
+  const ativo = hrefAtivo(pathname);
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-berinjela text-white md:h-auto md:w-56 md:self-stretch">
@@ -63,15 +76,13 @@ export function Sidebar({
 
       <nav className="flex-1 space-y-0.5 px-2">
         {LINKS.map((link) => {
-          const active =
-            link.href === "/"
-              ? pathname === "/"
-              : pathname?.startsWith(link.href);
+          const active = link.href === ativo;
           const Icon = link.icon;
           return (
             <Link
               key={link.href}
               href={link.href}
+              prefetch
               onClick={onNavigate}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out ${
                 active
