@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import {
   validarItemNota,
@@ -43,7 +42,6 @@ export function ItemValidacaoForm({
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [criandoPending, startCriarTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   const insumoSelecionado = insumos.find((i) => i.id === insumoId);
@@ -88,7 +86,6 @@ export function ItemValidacaoForm({
           textoOriginal: item.texto_original,
         });
         toast("Item validado, estoque atualizado");
-        router.refresh();
       } catch {
         setErro("Não foi possível confirmar. Tente novamente.");
       }

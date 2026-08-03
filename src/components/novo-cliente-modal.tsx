@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Label, Input, FieldGroup } from "@/components/ui/field";
@@ -13,7 +12,6 @@ export function NovoClienteModal() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const router = useRouter();
   const toast = useToast();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -24,7 +22,6 @@ export function NovoClienteModal() {
       setOpen(false);
       formRef.current?.reset();
       toast("Cliente criado");
-      router.refresh();
     });
   }
 

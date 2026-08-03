@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { alternarDisponibilidade } from "@/lib/actions/produtos";
 import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
@@ -14,14 +13,12 @@ export function DisponibilidadeToggle({
   disponivel: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   function handleClick() {
     startTransition(async () => {
       await alternarDisponibilidade(id, !disponivel);
       toast(disponivel ? "Marcado como indisponível" : "Marcado como disponível");
-      router.refresh();
     });
   }
 

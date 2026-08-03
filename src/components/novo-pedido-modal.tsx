@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ export function NovoPedidoModal({
   boxCookies: BoxCookies;
 }) {
   const [open, setOpen] = useState(false);
-  const router = useRouter();
   const toast = useToast();
 
   return (
@@ -50,7 +48,6 @@ export function NovoPedidoModal({
           onSuccess={() => {
             setOpen(false);
             toast("Pedido criado");
-            router.refresh();
           }}
         />
       </Modal>

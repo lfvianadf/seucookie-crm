@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { X, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Label, Input, Select, FieldGroup } from "@/components/ui/field";
@@ -44,7 +43,6 @@ export function ReceitaModal({
   const [quantidadeSelecionada, setQuantidadeSelecionada] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   const insumoUnidade = insumos.find((i) => i.id === insumoSelecionado)?.unidade_base;
@@ -101,7 +99,6 @@ export function ReceitaModal({
         }
         setOpen(false);
         toast(receitaExistente ? "Receita salva" : "Receita criada");
-        router.refresh();
         if (!receitaExistente) {
           setNome("");
           setRendimento("");

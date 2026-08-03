@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { Label, Input, Select, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ export function InsumoModal({
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const router = useRouter();
   const toast = useToast();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -43,7 +41,6 @@ export function InsumoModal({
       }
       setOpen(false);
       toast(insumoExistente ? "Insumo salvo" : "Insumo criado");
-      router.refresh();
     });
   }
 

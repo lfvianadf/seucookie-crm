@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Label, Input, Select, Textarea, FieldGroup } from "@/components/ui/field";
@@ -50,7 +49,6 @@ export function ProdutoModal({
     new Set(boxCookieIdsExistentes ?? [])
   );
   const formRef = useRef<HTMLFormElement>(null);
-  const router = useRouter();
   const toast = useToast();
 
   function alternarCookie(id: string) {
@@ -75,7 +73,6 @@ export function ProdutoModal({
       }
       setOpen(false);
       toast(produtoExistente ? "Produto salvo" : "Produto criado");
-      router.refresh();
     });
   }
 
