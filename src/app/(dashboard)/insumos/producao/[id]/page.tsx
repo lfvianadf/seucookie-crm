@@ -74,8 +74,8 @@ export default async function ProducaoDetalhePage({
       </p>
 
       {itensConsumidos.length ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border bg-white">
+          <table className="w-full min-w-[36rem] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="px-4 py-3 text-xs font-semibold text-neutro-500">

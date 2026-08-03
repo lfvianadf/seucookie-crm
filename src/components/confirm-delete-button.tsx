@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Button } from "@/components/ui/button";
@@ -12,14 +11,15 @@ export function ConfirmDeleteButton({
   onConfirm,
   itemName,
   label,
+  size,
 }: {
   onConfirm: () => Promise<void>;
   itemName: string;
   label?: string;
+  size?: "sm" | "toque";
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   function handleConfirm() {
@@ -27,7 +27,6 @@ export function ConfirmDeleteButton({
       await onConfirm();
       setOpen(false);
       toast(`${label ?? itemName} excluído`);
-      router.refresh();
     });
   }
 
@@ -35,6 +34,7 @@ export function ConfirmDeleteButton({
     <>
       <IconButton
         tone="destructive"
+        size={size}
         onClick={() => setOpen(true)}
         aria-label={`Excluir ${itemName}`}
         title="Excluir"

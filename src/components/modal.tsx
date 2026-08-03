@@ -62,7 +62,7 @@ export function Modal({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-8 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-2 py-4 sm:items-center sm:p-4 sm:py-8">
       <button
         type="button"
         aria-label="Fechar"
@@ -77,7 +77,7 @@ export function Modal({
         aria-labelledby="modal-title"
         className={`animate-modal-in relative w-full ${maxWidth} rounded-xl bg-white shadow-modal`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-4 sm:px-6 sm:py-5">
           <div>
             <h2 id="modal-title" className="text-base font-semibold text-berinjela">
               {title}
@@ -95,7 +95,9 @@ export function Modal({
             <X className="h-4 w-4" strokeWidth={1.75} />
           </button>
         </div>
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
+        <div className="max-h-[75vh] overflow-y-auto px-4 py-4 sm:max-h-[70vh] sm:px-6 sm:py-5">
+          {children}
+        </div>
       </div>
     </div>,
     document.body

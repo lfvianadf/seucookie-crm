@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { atualizarStatusPedido } from "@/lib/actions/pedidos";
 import { useToast } from "@/components/ui/toast";
@@ -50,7 +49,6 @@ export function PedidosKanban({
   const [colunaAlvo, setColunaAlvo] = useState<PedidoStatus | null>(null);
   const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   function moverPedido(id: string, status: PedidoStatus) {
@@ -58,7 +56,6 @@ export function PedidosKanban({
     startTransition(() => {
       atualizarStatusPedido(id, status).then(() => {
         toast(`Pedido movido para "${STATUS_LABEL[status]}"`);
-        router.refresh();
       });
     });
   }
@@ -66,7 +63,9 @@ export function PedidosKanban({
   const pedidoSelecionado = pedidos.find((p) => p.id === pedidoSelecionadoId) ?? null;
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    // no mobile as colunas ocupam quase a tela toda e "encaixam" no scroll,
+    // então dá pra deslizar entre status sem enxergar meia coluna cortada.
+    <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:snap-none md:px-0">
       {STATUS_ORDEM.map((status) => {
         const itens = pedidos.filter((p) => p.status === status);
         const isAlvo = colunaAlvo === status;
@@ -86,7 +85,7 @@ export function PedidosKanban({
               setArrastando(null);
               setColunaAlvo(null);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border-t-2 bg-berinjela-50/50 transition-shadow duration-150 ${STATUS_COLUNA_ACCENT[status]} ${
+            className={`flex w-[85vw] shrink-0 snap-start flex-col rounded-xl border-t-2 bg-berinjela-50/50 transition-shadow duration-150 sm:w-72 ${STATUS_COLUNA_ACCENT[status]} ${
               isAlvo ? "shadow-[0_0_0_2px_var(--rosa)]" : ""
             }`}
           >
