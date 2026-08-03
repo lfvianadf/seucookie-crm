@@ -124,6 +124,84 @@ async function finalizarCheckout(
 }
 ```
 
+## Passo 3 — produtos do tipo "box" (caixa com cookies variados)
+
+Agora `produtos` tem um campo `tipo_produto`: `"cookie"` ou `"box"`. Pro site, isso muda
+o que precisa ser mostrado e como o pedido é montado — mas só quando o produto for box.
+
+```ts
+const { data: produtos } = await supabase
+  .from("produtos")
+  .select("id, nome, preco, capitulo, tipo_produto")
+  .eq("disponivel", true);
+```
+
+Se `tipo_produto === "box"`, o cliente precisa escolher **quais cookies e quantas
+unidades de cada** vão dentro daquela caixa (ex: "2 Nutella + 2 Churros"). Pra saber
+quais cookies são permitidos numa box específica, busca em `produto_box_itens`:
+
+```ts
+const { data: boxItens } = await supabase
+  .from("produto_box_itens")
+  .select("cookie_id")
+  .eq("box_id", boxProdutoId);
+// cruze cookie_id com a lista de produtos (tipo_produto = 'cookie') que você já buscou
+// pra pegar nome/preço de cada cookie permitido
+```
+
+Regras importantes:
+
+- **A box em si não tem estoque próprio** — a disponibilidade dela (`disponivel`) já vem
+  calculada certa no CRM (é `true` enquanto pelo menos um dos cookies permitidos tiver
+  estoque). O site não precisa calcular nada, só respeitar o `disponivel` que já vem.
+- Ao criar o `pedido_itens` da box, grava **também** a composição escolhida em
+  `pedido_item_composicao` — é isso (e não a linha da box) que desconta o estoque de
+  verdade dos cookies:
+
+```ts
+type ItemComposicaoBox = { cookieProdutoId: string; quantidade: number };
+
+async function criarItemBox(
+  pedidoId: string,
+  boxProdutoId: string,
+  precoBox: number,
+  composicao: ItemComposicaoBox[]
+) {
+  const { data: pedidoItem, error } = await supabase
+    .from("pedido_itens")
+    .insert({
+      pedido_id: pedidoId,
+      produto_id: boxProdutoId,
+      quantidade: 1, // uma unidade de box = uma composição; pra 2 boxes, insira 2 linhas
+      preco_unitario: precoBox,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  const { error: composicaoError } = await supabase
+    .from("pedido_item_composicao")
+    .insert(
+      composicao.map((c) => ({
+        pedido_item_id: pedidoItem.id,
+        cookie_produto_id: c.cookieProdutoId,
+        quantidade: c.quantidade,
+      }))
+    );
+
+  if (composicaoError) throw composicaoError;
+}
+```
+
+Pra cookies normais (`tipo_produto === "cookie"`), nada muda — continua o fluxo do
+Passo 2, sem `pedido_item_composicao`.
+
+Se o carrinho tiver cookies avulsos e boxes juntos, insira cada linha de `pedido_itens`
+separadamente (um `insert` por item), porque a box precisa do `id` do `pedido_itens`
+recém-criado antes de gravar a composição — não dá pra usar `insert` em lote como no
+Passo 2 quando há boxes envolvidas.
+
 ## Erros esperados
 
 - **`new row violates row-level security policy`** em `pedidos`: confere se `origem`
