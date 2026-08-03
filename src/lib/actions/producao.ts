@@ -25,7 +25,52 @@ export async function registrarProducao(params: {
 
   if (error) throw error;
 
+  revalidarInsumos();
+}
+
+export async function atualizarProducao(params: {
+  producaoId: string;
+  receitaId: string;
+  produtoId: string;
+  quantidade: number;
+  data?: string;
+}) {
+  const { producaoId, receitaId, produtoId, quantidade, data } = params;
+
+  if (!receitaId || !produtoId || !quantidade || quantidade <= 0) {
+    throw new Error("Receita, produto e quantidade são obrigatórios.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("atualizar_producao", {
+    p_producao_id: producaoId,
+    p_receita_id: receitaId,
+    p_produto_id: produtoId,
+    p_quantidade: quantidade,
+    p_data: data ?? null,
+  });
+
+  if (error) throw error;
+
+  revalidarInsumos();
+}
+
+export async function excluirProducao(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("estornar_producao", {
+    p_producao_id: id,
+  });
+
+  if (error) throw error;
+
+  revalidarInsumos();
+}
+
+// produção mexe em insumo, produto e no cálculo das receitas — as três
+// telas precisam ser invalidadas junto.
+function revalidarInsumos() {
   revalidatePath("/insumos/producao");
   revalidatePath("/insumos");
   revalidatePath("/insumos/receitas");
+  revalidatePath("/produtos");
 }

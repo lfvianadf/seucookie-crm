@@ -448,6 +448,20 @@ export interface Database {
         };
         Returns: string;
       };
+      atualizar_producao: {
+        Args: {
+          p_producao_id: string;
+          p_receita_id: string;
+          p_produto_id: string;
+          p_quantidade: number;
+          p_data?: string | null;
+        };
+        Returns: undefined;
+      };
+      estornar_producao: {
+        Args: { p_producao_id: string };
+        Returns: undefined;
+      };
       buscar_cliente_por_telefone: {
         Args: { p_telefone: string };
         Returns: { id: string; nome: string; endereco: string | null }[];

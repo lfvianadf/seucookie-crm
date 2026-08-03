@@ -1,32 +1,46 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Label, Input, Select, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { registrarProducao } from "@/lib/actions/producao";
+import { registrarProducao, atualizarProducao } from "@/lib/actions/producao";
 
 type Receita = { id: string; nome: string; rendimento_cookies: number };
 type Produto = { id: string; nome: string; receita_id: string | null };
 
+type ProducaoExistente = {
+  id: string;
+  receita_id: string;
+  produto_id: string;
+  quantidade_produzida: number;
+  data: string;
+};
+
 export function ProducaoModal({
   receitas,
   produtos,
+  producaoExistente,
+  trigger,
 }: {
   receitas: Receita[];
   produtos: Produto[];
+  producaoExistente?: ProducaoExistente;
+  trigger?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [receitaId, setReceitaId] = useState("");
-  const [produtoId, setProdutoId] = useState("");
-  const [quantidade, setQuantidade] = useState("");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [receitaId, setReceitaId] = useState(producaoExistente?.receita_id ?? "");
+  const [produtoId, setProdutoId] = useState(producaoExistente?.produto_id ?? "");
+  const [quantidade, setQuantidade] = useState(
+    producaoExistente ? String(producaoExistente.quantidade_produzida) : ""
+  );
+  const [data, setData] = useState(
+    (producaoExistente?.data ?? new Date().toISOString()).slice(0, 10)
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const toast = useToast();
 
   function selecionarReceita(id: string) {
@@ -54,6 +68,19 @@ export function ProducaoModal({
 
     startTransition(async () => {
       try {
+        if (producaoExistente) {
+          await atualizarProducao({
+            producaoId: producaoExistente.id,
+            receitaId,
+            produtoId,
+            quantidade: qtd,
+            data: data ? new Date(data).toISOString() : undefined,
+          });
+          setOpen(false);
+          toast("Produção atualizada, estoque recalculado");
+          return;
+        }
+
         await registrarProducao({
           receitaId,
           produtoId,
@@ -65,25 +92,32 @@ export function ProducaoModal({
         setProdutoId("");
         setQuantidade("");
         toast("Produção registrada, estoque atualizado");
-        router.refresh();
       } catch {
-        setErro("Não foi possível registrar. Confira o estoque e tente de novo.");
+        setErro("Não foi possível salvar. Confira o estoque e tente de novo.");
       }
     });
   }
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" strokeWidth={2} />
-        Registrar produção
-      </Button>
+      {trigger ? (
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+      ) : (
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          Registrar produção
+        </Button>
+      )}
 
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Registrar produção"
-        description="Baixa o estoque dos insumos automaticamente, proporcional à receita."
+        title={producaoExistente ? "Editar produção" : "Registrar produção"}
+        description={
+          producaoExistente
+            ? "Ao salvar, o estoque da fornada antiga é estornado e o novo é aplicado."
+            : "Baixa o estoque dos insumos automaticamente, proporcional à receita."
+        }
       >
         <FieldGroup className="mb-6">
           <div>
@@ -158,7 +192,7 @@ export function ProducaoModal({
             Cancelar
           </Button>
           <Button type="button" onClick={handleSubmit} loading={isPending}>
-            Registrar e baixar estoque
+            {producaoExistente ? "Salvar alterações" : "Registrar e baixar estoque"}
           </Button>
         </div>
       </Modal>
