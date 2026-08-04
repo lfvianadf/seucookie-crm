@@ -6,12 +6,18 @@ import { Label, Input, Select, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { criarInsumo, atualizarInsumo } from "@/lib/actions/insumos";
-import type { UnidadeBase } from "@/lib/types/database";
+import {
+  CATEGORIA_ORDEM,
+  CATEGORIA_LABEL,
+  CATEGORIA_HINT,
+} from "@/lib/categoria-insumo";
+import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
 
 type InsumoExistente = {
   id: string;
   nome: string;
   unidade_base: UnidadeBase;
+  categoria: CategoriaInsumo;
   estoque_atual: number;
   custo_medio_por_unidade: number;
   preco_atual: number;
@@ -25,6 +31,9 @@ export function InsumoModal({
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [categoria, setCategoria] = useState<CategoriaInsumo>(
+    insumoExistente?.categoria ?? "outros"
+  );
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const toast = useToast();
@@ -66,22 +75,45 @@ export function InsumoModal({
               />
             </div>
 
-            <div>
-              <Label htmlFor="unidade_base">Unidade</Label>
-              <Select
-                id="unidade_base"
-                name="unidade_base"
-                required
-                defaultValue={insumoExistente?.unidade_base ?? ""}
-              >
-                <option value="" disabled>
-                  Selecione
-                </option>
-                <option value="g">g</option>
-                <option value="ml">ml</option>
-                <option value="un">un</option>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="categoria">Categoria</Label>
+                <Select
+                  id="categoria"
+                  name="categoria"
+                  required
+                  value={categoria}
+                  onChange={(e) =>
+                    setCategoria(e.target.value as CategoriaInsumo)
+                  }
+                >
+                  {CATEGORIA_ORDEM.map((valor) => (
+                    <option key={valor} value={valor}>
+                      {CATEGORIA_LABEL[valor]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="unidade_base">Unidade</Label>
+                <Select
+                  id="unidade_base"
+                  name="unidade_base"
+                  required
+                  defaultValue={insumoExistente?.unidade_base ?? ""}
+                >
+                  <option value="" disabled>
+                    Selecione
+                  </option>
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                  <option value="un">un</option>
+                </Select>
+              </div>
             </div>
+            <p className="-mt-2 text-xs text-neutro-500">
+              {CATEGORIA_HINT[categoria]}
+            </p>
 
             <div>
               <Label htmlFor="estoque_atual">Estoque atual</Label>

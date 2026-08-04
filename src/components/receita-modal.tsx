@@ -11,9 +11,15 @@ import {
   atualizarReceita,
   type IngredienteReceita,
 } from "@/lib/actions/receitas";
-import type { UnidadeBase } from "@/lib/types/database";
+import { agruparPorCategoria } from "@/lib/categoria-insumo";
+import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
 
-type Insumo = { id: string; nome: string; unidade_base: UnidadeBase };
+type Insumo = {
+  id: string;
+  nome: string;
+  unidade_base: UnidadeBase;
+  categoria: CategoriaInsumo;
+};
 
 type ReceitaExistente = {
   id: string;
@@ -160,10 +166,14 @@ export function ReceitaModal({
                   onChange={(e) => setInsumoSelecionado(e.target.value)}
                 >
                   <option value="">Selecione o insumo</option>
-                  {insumos.map((insumo) => (
-                    <option key={insumo.id} value={insumo.id}>
-                      {insumo.nome} ({insumo.unidade_base})
-                    </option>
+                  {agruparPorCategoria(insumos).map((grupo) => (
+                    <optgroup key={grupo.categoria} label={grupo.label}>
+                      {grupo.itens.map((insumo) => (
+                        <option key={insumo.id} value={insumo.id}>
+                          {insumo.nome} ({insumo.unidade_base})
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </Select>
               </div>

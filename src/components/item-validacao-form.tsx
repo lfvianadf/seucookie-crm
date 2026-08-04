@@ -11,9 +11,15 @@ import { Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { useToast } from "@/components/ui/toast";
-import type { UnidadeBase } from "@/lib/types/database";
+import { agruparPorCategoria } from "@/lib/categoria-insumo";
+import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
 
-type Insumo = { id: string; nome: string; unidade_base: UnidadeBase };
+type Insumo = {
+  id: string;
+  nome: string;
+  unidade_base: UnidadeBase;
+  categoria: CategoriaInsumo;
+};
 
 type Item = {
   id: string;
@@ -142,10 +148,14 @@ export function ItemValidacaoForm({
               }}
             >
               <option value="">Selecione o insumo</option>
-              {insumos.map((insumo) => (
-                <option key={insumo.id} value={insumo.id}>
-                  {insumo.nome} ({insumo.unidade_base})
-                </option>
+              {agruparPorCategoria(insumos).map((grupo) => (
+                <optgroup key={grupo.categoria} label={grupo.label}>
+                  {grupo.itens.map((insumo) => (
+                    <option key={insumo.id} value={insumo.id}>
+                      {insumo.nome} ({insumo.unidade_base})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
               <option value="__novo__">+ Criar novo insumo</option>
             </Select>

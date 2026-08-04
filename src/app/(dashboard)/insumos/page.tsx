@@ -10,6 +10,8 @@ import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { UNIDADE_GRANDE } from "@/lib/unidade";
+import { agruparPorCategoria } from "@/lib/categoria-insumo";
+import { CategoriaCard } from "@/components/categoria-card";
 
 export default async function InsumosPage() {
   const supabase = await createClient();
@@ -44,10 +46,19 @@ export default async function InsumosPage() {
       />
 
       {insumos?.length ? (
-        <>
+        <div className="space-y-3">
+        {agruparPorCategoria(insumos).map((grupo) => (
+        <CategoriaCard
+          key={grupo.categoria}
+          label={grupo.label}
+          total={grupo.itens.length}
+          alertas={
+            grupo.itens.filter((i) => Number(i.estoque_atual) <= 0).length
+          }
+        >
         {/* mobile: lista de cards, sem tabela larga rolando de lado */}
         <div className="space-y-2 md:hidden">
-          {insumos.map((insumo) => (
+          {grupo.itens.map((insumo) => (
             <div
               key={insumo.id}
               className="rounded-xl border border-border bg-white p-3"
@@ -107,30 +118,12 @@ export default async function InsumosPage() {
           ))}
         </div>
 
-        <div className="hidden overflow-hidden rounded-xl border border-border bg-white md:block">
+        <div className="hidden md:block">
+          {/* sem <thead>: o cabeçalho se repetiria em cada categoria aberta
+              e viraria ruído. As colunas já se explicam pelo formato. */}
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-xs font-semibold text-neutro-500">
-                  Nome
-                </th>
-                <th className="px-4 py-3 text-xs font-semibold text-neutro-500">
-                  Unidade
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-neutro-500">
-                  Estoque atual
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-neutro-500">
-                  Preço atual
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-neutro-500">
-                  Custo médio
-                </th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
             <tbody>
-              {insumos.map((insumo) => (
+              {grupo.itens.map((insumo) => (
                 <tr
                   key={insumo.id}
                   className="group border-b border-border transition-colors duration-150 last:border-0 hover:bg-berinjela-50/60"
@@ -165,11 +158,13 @@ export default async function InsumosPage() {
                         )}
                       R$ {Number(insumo.preco_atual).toFixed(2)} /{" "}
                       {UNIDADE_GRANDE[insumo.unidade_base]}
+                      <span className="text-neutro-400">última</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-neutro-700">
                     R$ {Number(insumo.custo_medio_por_unidade).toFixed(2)} /{" "}
-                    {UNIDADE_GRANDE[insumo.unidade_base]}
+                    {UNIDADE_GRANDE[insumo.unidade_base]}{" "}
+                    <span className="text-neutro-400">médio</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
@@ -206,7 +201,9 @@ export default async function InsumosPage() {
             </tbody>
           </table>
         </div>
-        </>
+        </CategoriaCard>
+        ))}
+        </div>
       ) : (
         <EmptyState
           icon={Package}

@@ -2,13 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { UnidadeBase } from "@/lib/types/database";
+import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
 
 export async function criarInsumo(formData: FormData) {
   const supabase = await createClient();
 
   const nome = String(formData.get("nome") ?? "").trim();
   const unidade_base = String(formData.get("unidade_base") ?? "") as UnidadeBase;
+  const categoria = String(
+    formData.get("categoria") ?? "outros"
+  ) as CategoriaInsumo;
   const estoque_atual = Number(formData.get("estoque_atual") ?? 0);
   const custo_medio_por_unidade = Number(
     formData.get("custo_medio_por_unidade") ?? 0
@@ -20,6 +23,7 @@ export async function criarInsumo(formData: FormData) {
   await supabase.from("insumos").insert({
     nome,
     unidade_base,
+    categoria,
     estoque_atual: Number.isNaN(estoque_atual) ? 0 : estoque_atual,
     custo_medio_por_unidade: Number.isNaN(custo_medio_por_unidade)
       ? 0
@@ -35,6 +39,9 @@ export async function atualizarInsumo(id: string, formData: FormData) {
 
   const nome = String(formData.get("nome") ?? "").trim();
   const unidade_base = String(formData.get("unidade_base") ?? "") as UnidadeBase;
+  const categoria = String(
+    formData.get("categoria") ?? "outros"
+  ) as CategoriaInsumo;
   const estoque_atual = Number(formData.get("estoque_atual") ?? 0);
   const custo_medio_por_unidade = Number(
     formData.get("custo_medio_por_unidade") ?? 0
@@ -48,6 +55,7 @@ export async function atualizarInsumo(id: string, formData: FormData) {
     .update({
       nome,
       unidade_base,
+      categoria,
       estoque_atual: Number.isNaN(estoque_atual) ? 0 : estoque_atual,
       custo_medio_por_unidade: Number.isNaN(custo_medio_por_unidade)
         ? 0

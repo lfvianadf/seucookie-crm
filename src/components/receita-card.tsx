@@ -8,9 +8,14 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { IconButton } from "@/components/ui/icon-button";
 import type { ItemCusto } from "@/lib/receita-custo";
 import type { IngredienteReceita } from "@/lib/actions/receitas";
-import type { UnidadeBase } from "@/lib/types/database";
+import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
 
-type Insumo = { id: string; nome: string; unidade_base: UnidadeBase };
+type Insumo = {
+  id: string;
+  nome: string;
+  unidade_base: UnidadeBase;
+  categoria: CategoriaInsumo;
+};
 
 type Receita = {
   id: string;

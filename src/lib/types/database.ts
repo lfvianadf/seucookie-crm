@@ -10,6 +10,15 @@ export type PedidoOrigem = "site" | "manual";
 
 export type UnidadeBase = "g" | "ml" | "un";
 
+export type CategoriaInsumo =
+  | "secos"
+  | "molhados"
+  | "cremes"
+  | "topping"
+  | "embalagens"
+  | "outros"
+  | "custos";
+
 export type NotaFiscalStatus =
   | "processando"
   | "aguardando_validacao"
@@ -220,6 +229,7 @@ export interface Database {
           id: string;
           nome: string;
           unidade_base: UnidadeBase;
+          categoria: CategoriaInsumo;
           estoque_atual: number;
           custo_medio_por_unidade: number;
           preco_atual: number;
@@ -231,6 +241,7 @@ export interface Database {
           id?: string;
           nome: string;
           unidade_base: UnidadeBase;
+          categoria?: CategoriaInsumo;
           estoque_atual?: number;
           custo_medio_por_unidade?: number;
           preco_atual?: number;

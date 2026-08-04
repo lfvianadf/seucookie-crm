@@ -27,7 +27,10 @@ export default async function NotaFiscalPage({
 
   const [{ data: itens }, { data: insumos }] = await Promise.all([
     supabase.from("nota_itens").select("*").eq("nota_id", id),
-    supabase.from("insumos").select("id, nome, unidade_base").order("nome"),
+    supabase
+      .from("insumos")
+      .select("id, nome, unidade_base, categoria")
+      .order("nome"),
   ]);
 
   const { data: fotoAssinada } = nota.foto_url
