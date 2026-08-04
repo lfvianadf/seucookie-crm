@@ -42,6 +42,8 @@ export interface Database {
           disponivel: boolean;
           qtd_estoque: number;
           tipo_produto: TipoProduto;
+          qtd_cookies_box: number | null;
+          acrescimo_box: number;
           capitulo: string | null;
           foto_url: string | null;
           receita_id: string | null;
@@ -57,6 +59,8 @@ export interface Database {
           disponivel?: boolean;
           qtd_estoque?: number;
           tipo_produto?: TipoProduto;
+          qtd_cookies_box?: number | null;
+          acrescimo_box?: number;
           capitulo?: string | null;
           foto_url?: string | null;
           receita_id?: string | null;

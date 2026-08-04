@@ -79,6 +79,12 @@ export async function criarProduto(formData: FormData) {
   const receitaId = String(formData.get("receita_id") ?? "").trim() || null;
   const qtdEstoqueRaw = String(formData.get("qtd_estoque") ?? "").trim();
   const qtdEstoque = qtdEstoqueRaw ? Number(qtdEstoqueRaw) : 0;
+  // cada campo só vale pro seu tipo: box guarda quantos cookies cabem,
+  // cookie guarda quanto soma ao entrar numa box.
+  const qtdCookiesBoxRaw = String(formData.get("qtd_cookies_box") ?? "").trim();
+  const qtdCookiesBox = qtdCookiesBoxRaw ? Number(qtdCookiesBoxRaw) : null;
+  const acrescimoBox = Number(formData.get("acrescimo_box") ?? 0);
+
   const tipoProduto = (String(formData.get("tipo_produto") ?? "cookie") ||
     "cookie") as TipoProduto;
 
@@ -96,6 +102,14 @@ export async function criarProduto(formData: FormData) {
       disponivel,
       qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
       tipo_produto: tipoProduto,
+      qtd_cookies_box:
+        tipoProduto === "box" && qtdCookiesBox && qtdCookiesBox > 0
+          ? qtdCookiesBox
+          : null,
+      acrescimo_box:
+        tipoProduto === "cookie" && !Number.isNaN(acrescimoBox)
+          ? acrescimoBox
+          : 0,
       foto_url,
       receita_id: receitaId,
       numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
@@ -122,6 +136,12 @@ export async function atualizarProduto(id: string, formData: FormData) {
   const receitaId = String(formData.get("receita_id") ?? "").trim() || null;
   const qtdEstoqueRaw = String(formData.get("qtd_estoque") ?? "").trim();
   const qtdEstoque = qtdEstoqueRaw ? Number(qtdEstoqueRaw) : 0;
+  // cada campo só vale pro seu tipo: box guarda quantos cookies cabem,
+  // cookie guarda quanto soma ao entrar numa box.
+  const qtdCookiesBoxRaw = String(formData.get("qtd_cookies_box") ?? "").trim();
+  const qtdCookiesBox = qtdCookiesBoxRaw ? Number(qtdCookiesBoxRaw) : null;
+  const acrescimoBox = Number(formData.get("acrescimo_box") ?? 0);
+
   const tipoProduto = (String(formData.get("tipo_produto") ?? "cookie") ||
     "cookie") as TipoProduto;
 
@@ -139,6 +159,14 @@ export async function atualizarProduto(id: string, formData: FormData) {
       disponivel,
       qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
       tipo_produto: tipoProduto,
+      qtd_cookies_box:
+        tipoProduto === "box" && qtdCookiesBox && qtdCookiesBox > 0
+          ? qtdCookiesBox
+          : null,
+      acrescimo_box:
+        tipoProduto === "cookie" && !Number.isNaN(acrescimoBox)
+          ? acrescimoBox
+          : 0,
       receita_id: receitaId,
       numero_receita: numeroReceitaRaw ? Number(numeroReceitaRaw) : null,
       ...(foto_url ? { foto_url } : {}),

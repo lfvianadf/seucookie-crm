@@ -132,9 +132,43 @@ o que precisa ser mostrado e como o pedido é montado — mas só quando o produ
 ```ts
 const { data: produtos } = await supabase
   .from("produtos")
-  .select("id, nome, preco, capitulo, tipo_produto")
+  .select(
+    "id, nome, preco, capitulo, tipo_produto, qtd_cookies_box, acrescimo_box"
+  )
   .eq("disponivel", true);
 ```
+
+### Preço da box é variável
+
+**`preço da box = preco (base) + Σ (acrescimo_box do cookie × quantidade escolhida)`**
+
+Exemplo: box com `preco` 39,90, Pistache com `acrescimo_box` 3,00 e Nutella com
+0. Cliente escolhe 2 Nutella + 2 Pistache → 39,90 + (2 × 3,00) = **R$ 45,90**.
+
+```ts
+function calcularPrecoBox(
+  precoBase: number,
+  composicao: { cookieProdutoId: string; quantidade: number }[],
+  cookies: { id: string; acrescimo_box: number }[]
+) {
+  const acrescimos = composicao.reduce((soma, item) => {
+    const cookie = cookies.find((c) => c.id === item.cookieProdutoId);
+    return soma + (Number(cookie?.acrescimo_box) || 0) * item.quantidade;
+  }, 0);
+  return precoBase + acrescimos;
+}
+```
+
+Cuidados:
+
+- **Nunca use o `preco` do cookie pra compor a box.** Aquele é o preço de venda
+  avulso; dentro da caixa o sabor custa `acrescimo_box` (em geral 0, porque já
+  está pago pelo preço base). Somar o preço cheio infla o pedido.
+- **`qtd_cookies_box`** diz quantos cookies a caixa comporta. Se vier
+  preenchido, só deixe fechar o pedido com exatamente essa quantidade. Se vier
+  `null`, a composição é livre.
+- Mostre o total ao cliente **antes** de finalizar, já com os acréscimos — o
+  `valor_total` que você gravar precisa bater com o que ele viu.
 
 Se `tipo_produto === "box"`, o cliente precisa escolher **quais cookies e quantas
 unidades de cada** vão dentro daquela caixa (ex: "2 Nutella + 2 Churros"). Pra saber
@@ -173,7 +207,7 @@ async function criarItemBox(
       pedido_id: pedidoId,
       produto_id: boxProdutoId,
       quantidade: 1, // uma unidade de box = uma composição; pra 2 boxes, insira 2 linhas
-      preco_unitario: precoBox,
+      preco_unitario: precoBox, // JÁ com os acréscimos — congela o valor da época
     })
     .select("id")
     .single();

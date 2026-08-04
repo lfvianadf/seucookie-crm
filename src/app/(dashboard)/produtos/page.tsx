@@ -122,7 +122,12 @@ export default async function ProdutosPage() {
                     {produto.nome}
                   </p>
                   <p className="mb-2.5 text-xs text-neutro-500">
-                    {produto.capitulo ?? "—"}
+                    {ehBox && produto.qtd_cookies_box
+                      ? `${produto.qtd_cookies_box} cookies`
+                      : (produto.capitulo ?? "—")}
+                    {!ehBox && produto.acrescimo_box > 0
+                      ? ` · +R$ ${Number(produto.acrescimo_box).toFixed(2)} em box`
+                      : ""}
                     {produto.numero_receita ? ` · nº ${produto.numero_receita}` : ""}
                     {" · "}
                     <span

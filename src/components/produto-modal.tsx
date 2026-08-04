@@ -23,6 +23,8 @@ type ProdutoExistente = {
   disponivel: boolean;
   qtd_estoque: number;
   tipo_produto: TipoProduto;
+  qtd_cookies_box: number | null;
+  acrescimo_box: number;
   foto_url: string | null;
   receita_id: string | null;
 };
@@ -148,7 +150,7 @@ export function ProdutoModal({
                 />
               </div>
               <div>
-                <Label htmlFor="preco">Preço</Label>
+                <Label htmlFor="preco">{ehBox ? "Preço base" : "Preço"}</Label>
                 <Input
                   id="preco"
                   name="preco"
@@ -159,6 +161,40 @@ export function ProdutoModal({
                 />
               </div>
             </div>
+
+            {ehBox ? (
+              <div>
+                <Label htmlFor="qtd_cookies_box">Cookies por caixa</Label>
+                <Input
+                  id="qtd_cookies_box"
+                  name="qtd_cookies_box"
+                  type="number"
+                  min={1}
+                  defaultValue={produtoExistente?.qtd_cookies_box ?? ""}
+                  placeholder="ex: 4"
+                />
+                <p className="mt-1 text-xs text-neutro-500">
+                  O pedido só aceita a box com exatamente essa quantidade.
+                  Deixe vazio pra permitir qualquer combinação.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="acrescimo_box">Acréscimo em box (R$)</Label>
+                <Input
+                  id="acrescimo_box"
+                  name="acrescimo_box"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  defaultValue={produtoExistente?.acrescimo_box ?? 0}
+                />
+                <p className="mt-1 text-xs text-neutro-500">
+                  Quanto esse sabor soma ao preço da box, por unidade. Deixe 0
+                  se ele não encarece a caixa.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>

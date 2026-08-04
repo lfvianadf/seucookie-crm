@@ -14,9 +14,13 @@ type Produto = {
   preco: number;
   capitulo: string | null;
   tipo_produto: TipoProduto;
+  qtd_cookies_box: number | null;
 };
 
-type BoxCookies = Record<string, { id: string; nome: string; preco: number }[]>;
+type BoxCookies = Record<
+  string,
+  { id: string; nome: string; preco: number; acrescimo_box: number }[]
+>;
 
 export function NovoPedidoModal({
   produtos,

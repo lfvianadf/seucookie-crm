@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/clientes";
 import { Label, Input, Textarea } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { calcularPrecoBox, totalEscolhido } from "@/lib/preco-box";
 import type { TipoProduto } from "@/lib/types/database";
 
 type Produto = {
@@ -17,6 +18,7 @@ type Produto = {
   preco: number;
   capitulo: string | null;
   tipo_produto: TipoProduto;
+  qtd_cookies_box: number | null;
 };
 
 type ClienteSugestao = {
@@ -26,7 +28,10 @@ type ClienteSugestao = {
   endereco: string | null;
 };
 
-type BoxCookies = Record<string, { id: string; nome: string; preco: number }[]>;
+type BoxCookies = Record<
+  string,
+  { id: string; nome: string; preco: number; acrescimo_box: number }[]
+>;
 
 type CaixaCarrinho = {
   tempId: string;
@@ -157,13 +162,23 @@ export function NovoPedidoForm({
       return;
     }
 
+    const exigidos = caixaEmMontagem.qtd_cookies_box;
+    if (exigidos && escolhidosNaMontagem !== exigidos) {
+      setErro(
+        `Essa box leva ${exigidos} cookies — você escolheu ${escolhidosNaMontagem}.`
+      );
+      return;
+    }
+
     setCaixas((prev) => [
       ...prev,
       {
         tempId: crypto.randomUUID(),
         produtoId: caixaEmMontagem.id,
         nome: caixaEmMontagem.nome,
-        preco: caixaEmMontagem.preco,
+        // congela o preço já com os acréscimos — se o acréscimo mudar
+        // depois, este pedido mantém o valor da época
+        preco: precoDaMontagem.total,
         composicao,
       },
     ]);
@@ -174,6 +189,21 @@ export function NovoPedidoForm({
   function removerCaixa(tempId: string) {
     setCaixas((prev) => prev.filter((c) => c.tempId !== tempId));
   }
+
+  // preço e contagem da box em montagem, recalculados a cada toque
+  const escolhidosNaMontagem = totalEscolhido(composicaoEmMontagem);
+  const exigidosNaMontagem = caixaEmMontagem?.qtd_cookies_box ?? null;
+  const precoDaMontagem = calcularPrecoBox(
+    caixaEmMontagem?.preco ?? 0,
+    Object.entries(composicaoEmMontagem).map(([cookieId, quantidade]) => ({
+      cookieId,
+      quantidade,
+    })),
+    caixaEmMontagem ? (boxCookies[caixaEmMontagem.id] ?? []) : []
+  );
+  const montagemCompleta =
+    escolhidosNaMontagem > 0 &&
+    (!exigidosNaMontagem || escolhidosNaMontagem === exigidosNaMontagem);
 
   const itensCarrinho = Object.entries(carrinho)
     .map(([produtoId, quantidade]) => {
@@ -341,13 +371,33 @@ export function NovoPedidoForm({
 
           {caixaEmMontagem && (
             <div className="mt-4 rounded-lg border border-rosa/30 bg-rosa/5 p-3">
-              <p className="mb-3 text-sm font-medium text-berinjela">
-                Montar {caixaEmMontagem.nome}
-              </p>
+              <div className="mb-3 flex items-baseline justify-between gap-2">
+                <p className="text-sm font-medium text-berinjela">
+                  Montar {caixaEmMontagem.nome}
+                </p>
+                {exigidosNaMontagem && (
+                  <span
+                    className={`text-xs font-medium ${
+                      escolhidosNaMontagem === exigidosNaMontagem
+                        ? "text-salvia-text"
+                        : "text-neutro-500"
+                    }`}
+                  >
+                    {escolhidosNaMontagem} de {exigidosNaMontagem}
+                  </span>
+                )}
+              </div>
               <div className="space-y-2">
                 {(boxCookies[caixaEmMontagem.id] ?? []).map((cookie) => (
                   <div key={cookie.id} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-berinjela">{cookie.nome}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-berinjela">
+                      {cookie.nome}
+                      {cookie.acrescimo_box > 0 && (
+                        <span className="ml-1 text-xs text-neutro-500">
+                          +R$ {Number(cookie.acrescimo_box).toFixed(2)}
+                        </span>
+                      )}
+                    </span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -376,13 +426,30 @@ export function NovoPedidoForm({
                   </p>
                 )}
               </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={cancelarMontagem}>
-                  Cancelar
-                </Button>
-                <Button type="button" onClick={confirmarMontagem}>
-                  Adicionar caixa
-                </Button>
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-rosa/20 pt-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-berinjela">
+                    R$ {precoDaMontagem.total.toFixed(2)}
+                  </p>
+                  {precoDaMontagem.acrescimos > 0 && (
+                    <p className="text-xs text-neutro-500">
+                      R$ {precoDaMontagem.precoBase.toFixed(2)} base + R${" "}
+                      {precoDaMontagem.acrescimos.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button type="button" variant="ghost" onClick={cancelarMontagem}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={confirmarMontagem}
+                    disabled={!montagemCompleta}
+                  >
+                    Adicionar caixa
+                  </Button>
+                </div>
               </div>
             </div>
           )}

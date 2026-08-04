@@ -15,7 +15,9 @@ export default async function PedidosPage() {
         .order("data_pedido", { ascending: false }),
       supabase
         .from("produtos")
-        .select("id, nome, preco, capitulo, tipo_produto")
+        .select(
+          "id, nome, preco, capitulo, tipo_produto, qtd_cookies_box, acrescimo_box"
+        )
         .eq("disponivel", true)
         .order("capitulo", { ascending: true })
         .order("nome", { ascending: true }),
@@ -27,8 +29,10 @@ export default async function PedidosPage() {
   // pra cada box, a lista de cookies que podem ir dentro — cruza com os
   // dados de produtos que já temos (evita join ambíguo: produto_box_itens
   // tem duas FKs pra produtos, uma pra box outra pro cookie).
-  const boxCookies: Record<string, { id: string; nome: string; preco: number }[]> =
-    {};
+  const boxCookies: Record<
+    string,
+    { id: string; nome: string; preco: number; acrescimo_box: number }[]
+  > = {};
   for (const item of boxItens ?? []) {
     const cookie = produtosLista.find((p) => p.id === item.cookie_id);
     if (!cookie) continue;
@@ -36,6 +40,7 @@ export default async function PedidosPage() {
       id: cookie.id,
       nome: cookie.nome,
       preco: cookie.preco,
+      acrescimo_box: cookie.acrescimo_box,
     });
   }
 
