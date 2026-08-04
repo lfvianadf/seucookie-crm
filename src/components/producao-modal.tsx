@@ -92,8 +92,12 @@ export function ProducaoModal({
         setProdutoId("");
         setQuantidade("");
         toast("Produção registrada, estoque atualizado");
-      } catch {
-        setErro("Não foi possível salvar. Confira o estoque e tente de novo.");
+      } catch (e) {
+        setErro(
+          e instanceof Error && e.message
+            ? e.message
+            : "Não foi possível salvar. Confira o estoque e tente de novo."
+        );
       }
     });
   }

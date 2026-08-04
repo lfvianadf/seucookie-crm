@@ -115,43 +115,27 @@ export async function validarItemNota(params: {
 
   const { data: insumo, error: insumoError } = await supabase
     .from("insumos")
-    .select("estoque_atual, custo_medio_por_unidade, numero_compras, unidade_base")
+    .select("unidade_base")
     .eq("id", insumoId)
     .single();
 
   if (insumoError || !insumo) throw new Error("Insumo não encontrado.");
 
-  const estoqueAnterior = Number(insumo.estoque_atual);
-  const custoAnterior = Number(insumo.custo_medio_por_unidade);
-  const comprasAnteriores = insumo.numero_compras;
-  const novoEstoque = estoqueAnterior + quantidade;
+  // Nota validada é uma compra como qualquer outra: vira um lote. O estoque
+  // e o custo médio do insumo saem dos lotes com saldo, então nada é
+  // sobrescrito aqui — a function cuida de reprocessar os dois.
+  //
+  // `quantidade` do item da nota vem na unidade base (g/ml/un), mas a
+  // function espera a unidade de compra (kg/L/un), então converte de volta.
+  const fator = insumo.unidade_base === "un" ? 1 : 1000;
+  const { error: loteError } = await supabase.rpc("registrar_entrada_insumo", {
+    p_insumo_id: insumoId,
+    p_quantidade: quantidade / fator,
+    p_valor_pago: valor,
+    p_data: null,
+  });
 
-  // normaliza o preço dessa compra pra kg (g) / L (ml) / un — nunca por
-  // grama ou mililitro cru, que fica ilegível (ex: R$0,01 em vez de R$10/kg).
-  const fatorNormalizacao = insumo.unidade_base === "un" ? 1 : 1000;
-  const custoNormalizadoDaCompra =
-    quantidade > 0 ? (valor / quantidade) * fatorNormalizacao : 0;
-
-  // média simples por número de compras — cada nota validada é um ponto na
-  // média, não ponderado pela quantidade comprada (compra pequena e grande
-  // pesam igual, é a "média de preço que você paga", não a "média do estoque").
-  const novoCusto =
-    (custoAnterior * comprasAnteriores + custoNormalizadoDaCompra) /
-    (comprasAnteriores + 1);
-
-  const { error: updateInsumoError } = await supabase
-    .from("insumos")
-    .update({
-      estoque_atual: novoEstoque,
-      custo_medio_por_unidade: novoCusto,
-      // preço atual não é média — é sempre o valor normalizado da última
-      // compra validada, pra você ver se o fornecedor subiu o preço.
-      preco_atual: custoNormalizadoDaCompra,
-      numero_compras: comprasAnteriores + 1,
-    })
-    .eq("id", insumoId);
-
-  if (updateInsumoError) throw updateInsumoError;
+  if (loteError) throw new Error(loteError.message);
 
   const { error: updateItemError } = await supabase
     .from("nota_itens")

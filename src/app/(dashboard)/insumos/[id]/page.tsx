@@ -22,6 +22,12 @@ export default async function InsumoDetalhePage({
 
   if (!insumo) notFound();
 
+  const { data: lotes } = await supabase
+    .from("insumo_lotes")
+    .select("id, quantidade, quantidade_restante, preco_unitario, data")
+    .eq("insumo_id", id)
+    .order("data", { ascending: false });
+
   const { data: receitaInsumos } = await supabase
     .from("receita_insumos")
     .select("receita_id, quantidade, receitas(nome, rendimento_cookies)")
@@ -74,6 +80,63 @@ export default async function InsumoDetalhePage({
         {Number(insumo.custo_medio_por_unidade).toFixed(2)} /{" "}
         {UNIDADE_GRANDE[insumo.unidade_base]}
       </p>
+
+      <h2 className="mb-3 text-sm font-semibold text-berinjela">
+        Entradas de compra
+      </h2>
+      <p className="mb-3 text-xs text-neutro-500">
+        O custo médio sai da média ponderada dos lotes que ainda têm saldo —
+        lote esgotado deixa de contar. O consumo baixa sempre do mais antigo
+        primeiro.
+      </p>
+
+      {lotes?.length ? (
+        <div className="mb-8 overflow-x-auto rounded-xl border border-border bg-white">
+          <table className="w-full min-w-[32rem] text-sm">
+            <tbody>
+              {lotes.map((lote) => {
+                const esgotado = Number(lote.quantidade_restante) <= 0;
+                return (
+                  <tr
+                    key={lote.id}
+                    className={`border-b border-border last:border-0 ${
+                      esgotado ? "text-neutro-400" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      {new Date(lote.data).toLocaleDateString("pt-BR")}
+                    </td>
+                    <td className="px-4 py-3">
+                      R$ {Number(lote.preco_unitario * (insumo.unidade_base === "un" ? 1 : 1000)).toFixed(2)}{" "}
+                      / {UNIDADE_GRANDE[insumo.unidade_base]}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {Number(lote.quantidade).toLocaleString("pt-BR")}{" "}
+                      {insumo.unidade_base} comprados
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium">
+                      {esgotado ? (
+                        <span className="text-neutro-400">esgotado</span>
+                      ) : (
+                        <span className="text-berinjela">
+                          restam{" "}
+                          {Number(lote.quantidade_restante).toLocaleString("pt-BR")}{" "}
+                          {insumo.unidade_base}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="mb-8 rounded-xl border border-border bg-white px-4 py-8 text-center text-sm text-neutro-500">
+          Nenhuma entrada registrada. Use o botão &ldquo;Entrada&rdquo; pra
+          lançar a primeira compra.
+        </p>
+      )}
 
       <h2 className="mb-3 text-sm font-semibold text-berinjela">
         Produções que usaram esse insumo

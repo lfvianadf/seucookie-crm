@@ -6,6 +6,7 @@ import { Label, Input, Select, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { criarInsumo, atualizarInsumo } from "@/lib/actions/insumos";
+import { UNIDADE_GRANDE } from "@/lib/unidade";
 import {
   CATEGORIA_ORDEM,
   CATEGORIA_LABEL,
@@ -20,7 +21,6 @@ type InsumoExistente = {
   categoria: CategoriaInsumo;
   estoque_atual: number;
   custo_medio_por_unidade: number;
-  preco_atual: number;
 };
 
 export function InsumoModal({
@@ -115,41 +115,32 @@ export function InsumoModal({
               {CATEGORIA_HINT[categoria]}
             </p>
 
-            <div>
-              <Label htmlFor="estoque_atual">Estoque atual</Label>
-              <Input
-                id="estoque_atual"
-                name="estoque_atual"
-                type="number"
-                step="0.001"
-                defaultValue={insumoExistente?.estoque_atual ?? 0}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="preco_atual">Preço atual (kg/L/un)</Label>
-                <Input
-                  id="preco_atual"
-                  name="preco_atual"
-                  type="number"
-                  step="0.01"
-                  defaultValue={insumoExistente?.preco_atual ?? 0}
-                />
+            {/* estoque e custo não são mais editáveis: os dois saem dos
+                lotes de compra. Digitar um valor aqui criaria um número que
+                não corresponde a nenhuma entrada real e o próximo
+                lançamento sobrescreveria de qualquer jeito. */}
+            {insumoExistente && (
+              <div className="rounded-lg bg-berinjela-50 px-3 py-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-xs text-neutro-500">Estoque atual</span>
+                  <span className="text-sm font-medium text-berinjela">
+                    {Number(insumoExistente.estoque_atual).toLocaleString("pt-BR")}{" "}
+                    {insumoExistente.unidade_base}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-3">
+                  <span className="text-xs text-neutro-500">Custo médio</span>
+                  <span className="text-sm font-medium text-berinjela">
+                    R$ {Number(insumoExistente.custo_medio_por_unidade).toFixed(2)}{" "}
+                    / {UNIDADE_GRANDE[insumoExistente.unidade_base]}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-neutro-500">
+                  Calculados a partir das entradas de compra que ainda têm
+                  saldo. Para alterar, registre uma entrada.
+                </p>
               </div>
-              <div>
-                <Label htmlFor="custo_medio_por_unidade">
-                  Custo médio (kg/L/un)
-                </Label>
-                <Input
-                  id="custo_medio_por_unidade"
-                  name="custo_medio_por_unidade"
-                  type="number"
-                  step="0.01"
-                  defaultValue={insumoExistente?.custo_medio_por_unidade ?? 0}
-                />
-              </div>
-            </div>
+            )}
           </FieldGroup>
 
           <div className="flex justify-end gap-2 border-t border-border pt-5">

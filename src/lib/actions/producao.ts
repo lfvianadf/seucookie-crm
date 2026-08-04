@@ -23,7 +23,9 @@ export async function registrarProducao(params: {
     p_data: data,
   });
 
-  if (error) throw error;
+  // a mensagem do banco diz qual insumo faltou e quanto — vale muito mais
+  // que um "não foi possível registrar" genérico na tela
+  if (error) throw new Error(error.message);
 
   revalidarInsumos();
 }
@@ -50,7 +52,7 @@ export async function atualizarProducao(params: {
     p_data: data ?? null,
   });
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidarInsumos();
 }

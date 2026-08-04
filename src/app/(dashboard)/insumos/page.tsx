@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Package, Pencil, Plus, Receipt, TrendingUp, TrendingDown } from "lucide-react";
+import { Package, Pencil, Plus, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { excluirInsumo } from "@/lib/actions/insumos";
 import { InsumoModal } from "@/components/insumo-modal";
@@ -83,8 +83,7 @@ export default async function InsumosPage() {
               </div>
               <p className="mb-3 text-xs text-neutro-500">
                 R$ {Number(insumo.custo_medio_por_unidade).toFixed(2)} /{" "}
-                {UNIDADE_GRANDE[insumo.unidade_base]} (médio) · R${" "}
-                {Number(insumo.preco_atual).toFixed(2)} (última compra)
+                {UNIDADE_GRANDE[insumo.unidade_base]} (custo médio do estoque)
               </p>
               <div className="flex items-center gap-2 border-t border-border pt-2">
                 <EntradaInsumoModal
@@ -146,20 +145,6 @@ export default async function InsumosPage() {
                   >
                     {Number(insumo.estoque_atual).toLocaleString("pt-BR")}{" "}
                     {insumo.unidade_base}
-                  </td>
-                  <td className="px-4 py-3 text-right text-neutro-700">
-                    <span className="inline-flex items-center gap-1 justify-end">
-                      {insumo.preco_atual > insumo.custo_medio_por_unidade && (
-                        <TrendingUp className="h-3.5 w-3.5 text-erro" strokeWidth={1.75} />
-                      )}
-                      {insumo.preco_atual < insumo.custo_medio_por_unidade &&
-                        insumo.preco_atual > 0 && (
-                          <TrendingDown className="h-3.5 w-3.5 text-salvia" strokeWidth={1.75} />
-                        )}
-                      R$ {Number(insumo.preco_atual).toFixed(2)} /{" "}
-                      {UNIDADE_GRANDE[insumo.unidade_base]}
-                      <span className="text-neutro-400">última</span>
-                    </span>
                   </td>
                   <td className="px-4 py-3 text-right text-neutro-700">
                     R$ {Number(insumo.custo_medio_por_unidade).toFixed(2)} /{" "}

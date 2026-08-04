@@ -257,6 +257,69 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["insumos"]["Insert"]>;
         Relationships: [];
       };
+      insumo_lotes: {
+        Row: {
+          id: string;
+          insumo_id: string;
+          quantidade: number;
+          quantidade_restante: number;
+          preco_unitario: number;
+          data: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          insumo_id: string;
+          quantidade: number;
+          quantidade_restante: number;
+          preco_unitario: number;
+          data?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["insumo_lotes"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "insumo_lotes_insumo_id_fkey";
+            columns: ["insumo_id"];
+            isOneToOne: false;
+            referencedRelation: "insumos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      producao_consumos: {
+        Row: {
+          id: string;
+          producao_id: string;
+          lote_id: string;
+          quantidade: number;
+        };
+        Insert: {
+          id?: string;
+          producao_id: string;
+          lote_id: string;
+          quantidade: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["producao_consumos"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "producao_consumos_producao_id_fkey";
+            columns: ["producao_id"];
+            isOneToOne: false;
+            referencedRelation: "producoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "producao_consumos_lote_id_fkey";
+            columns: ["lote_id"];
+            isOneToOne: false;
+            referencedRelation: "insumo_lotes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       insumo_apelidos: {
         Row: {
           id: string;
@@ -473,6 +536,15 @@ export interface Database {
           p_data?: string | null;
         };
         Returns: undefined;
+      };
+      registrar_entrada_insumo: {
+        Args: {
+          p_insumo_id: string;
+          p_quantidade: number;
+          p_valor_pago: number;
+          p_data?: string | null;
+        };
+        Returns: string;
       };
       estornar_producao: {
         Args: { p_producao_id: string };
