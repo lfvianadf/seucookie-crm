@@ -26,12 +26,20 @@ export function ReceitaModal({
   insumos,
   receitaExistente,
   trigger,
+  open: openControlado,
+  onOpenChange,
 }: {
   insumos: Insumo[];
   receitaExistente?: ReceitaExistente;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
+  /** controlado por quem chama — usado quando outro modal precisa
+   *  fechar antes deste abrir */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = onOpenChange ?? setOpenInterno;
   const [nome, setNome] = useState(receitaExistente?.nome ?? "");
   const [rendimento, setRendimento] = useState(
     String(receitaExistente?.rendimento_cookies ?? "")
@@ -112,7 +120,7 @@ export function ReceitaModal({
 
   return (
     <>
-      <span onClick={() => setOpen(true)}>{trigger}</span>
+      {trigger && <span onClick={() => setOpen(true)}>{trigger}</span>}
 
       <Modal
         open={open}

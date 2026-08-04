@@ -12,13 +12,24 @@ export function ConfirmDeleteButton({
   itemName,
   label,
   size,
+  open: openControlado,
+  onOpenChange,
+  semBotao,
 }: {
   onConfirm: () => Promise<void>;
   itemName: string;
   label?: string;
   size?: "sm" | "toque";
+  /** controlado por quem chama — usado quando outro modal precisa
+   *  fechar antes deste abrir */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** esconde o ícone de lixeira, deixando só o modal de confirmação */
+  semBotao?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = onOpenChange ?? setOpenInterno;
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -32,15 +43,17 @@ export function ConfirmDeleteButton({
 
   return (
     <>
-      <IconButton
-        tone="destructive"
-        size={size}
-        onClick={() => setOpen(true)}
-        aria-label={`Excluir ${itemName}`}
-        title="Excluir"
-      >
-        <Trash2 className="h-4 w-4" strokeWidth={1.75} />
-      </IconButton>
+      {!semBotao && (
+        <IconButton
+          tone="destructive"
+          size={size}
+          onClick={() => setOpen(true)}
+          aria-label={`Excluir ${itemName}`}
+          title="Excluir"
+        >
+          <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+        </IconButton>
+      )}
 
       <Modal
         open={open}

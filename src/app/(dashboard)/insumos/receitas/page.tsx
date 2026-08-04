@@ -1,10 +1,9 @@
-import { ClipboardList, Pencil, Plus } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { excluirReceita } from "@/lib/actions/receitas";
 import { ReceitaModal } from "@/components/receita-modal";
-import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
+import { ReceitaCard } from "@/components/receita-card";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { calcularCustoReceita } from "@/lib/receita-custo";
@@ -23,13 +22,20 @@ export default async function ReceitasPage() {
   const receitaInsumosLista = receitaInsumos ?? [];
 
   const receitasComCalculo = (receitas ?? []).map((receita) => {
-    const { custoPorCookie, cookiesPossiveis, gargaloInsumoId } =
-      calcularCustoReceita(receita, receitaInsumosLista, insumosLista);
+    const {
+      custoReceita,
+      custoPorCookie,
+      cookiesPossiveis,
+      gargaloInsumoId,
+      detalhamento,
+    } = calcularCustoReceita(receita, receitaInsumosLista, insumosLista);
 
     return {
       ...receita,
+      custoReceita,
       custoPorCookie,
       cookiesPossiveis,
+      detalhamento,
       gargaloInsumo: insumosLista.find((i) => i.id === gargaloInsumoId)?.nome ?? null,
       itens: receitaInsumosLista
         .filter((ri) => ri.receita_id === receita.id)
@@ -61,75 +67,12 @@ export default async function ReceitasPage() {
       {receitasComCalculo.length ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {receitasComCalculo.map((receita) => (
-            <div
+            <ReceitaCard
               key={receita.id}
-              className="group rounded-xl border border-border bg-white p-4 transition-shadow duration-150 hover:shadow-md"
-            >
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-berinjela">
-                    {receita.nome}
-                  </p>
-                  <p className="text-xs text-neutro-500">
-                    Rende {receita.rendimento_cookies} cookies
-                  </p>
-                </div>
-                <div className="-mr-1.5 -mt-1.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-                  <ReceitaModal
-                    insumos={insumosLista}
-                    receitaExistente={{
-                      id: receita.id,
-                      nome: receita.nome,
-                      rendimento_cookies: receita.rendimento_cookies,
-                      itens: receita.itens,
-                    }}
-                    trigger={
-                      <IconButton
-                        aria-label={`Editar ${receita.nome}`}
-                        title="Editar"
-                      >
-                        <Pencil className="h-4 w-4" strokeWidth={1.75} />
-                      </IconButton>
-                    }
-                  />
-                  <ConfirmDeleteButton
-                    itemName={receita.nome}
-                    onConfirm={excluirReceita.bind(null, receita.id)}
-                  />
-                </div>
-              </div>
-
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-berinjela-50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide text-neutro-500">
-                    Custo/cookie
-                  </p>
-                  <p className="text-sm font-semibold text-berinjela">
-                    R$ {receita.custoPorCookie.toFixed(2)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-berinjela-50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide text-neutro-500">
-                    Dá pra fazer
-                  </p>
-                  <p
-                    className={`text-sm font-semibold ${
-                      receita.cookiesPossiveis === 0
-                        ? "text-erro-text"
-                        : "text-salvia-text"
-                    }`}
-                  >
-                    {receita.cookiesPossiveis} cookies
-                  </p>
-                </div>
-              </div>
-
-              {receita.gargaloInsumo && receita.cookiesPossiveis === 0 && (
-                <p className="text-xs text-erro-text">
-                  Gargalo: falta {receita.gargaloInsumo}
-                </p>
-              )}
-            </div>
+              receita={receita}
+              insumos={insumosLista}
+              onExcluir={excluirReceita.bind(null, receita.id)}
+            />
           ))}
         </div>
       ) : (
