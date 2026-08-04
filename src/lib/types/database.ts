@@ -14,6 +14,7 @@ export type CategoriaInsumo =
   | "secos"
   | "molhados"
   | "cremes"
+  | "chocolates"
   | "topping"
   | "embalagens"
   | "outros"

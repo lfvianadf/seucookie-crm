@@ -19,6 +19,7 @@ begin
       'secos',
       'molhados',
       'cremes',
+      'chocolates',
       'topping',
       'embalagens',
       'outros',
