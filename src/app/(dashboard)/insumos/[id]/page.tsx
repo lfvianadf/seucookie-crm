@@ -107,7 +107,13 @@ export default async function InsumoDetalhePage({
                       {new Date(lote.data).toLocaleDateString("pt-BR")}
                     </td>
                     <td className="px-4 py-3">
-                      R$ {Number(lote.preco_unitario * (insumo.unidade_base === "un" ? 1 : 1000)).toFixed(2)}{" "}
+                      {/* lote guarda por unidade base (grama/ml); a tela
+                          sempre mostra por kg/L */}
+                      R${" "}
+                      {(
+                        Number(lote.preco_unitario) *
+                        (insumo.unidade_base === "un" ? 1 : 1000)
+                      ).toFixed(2)}{" "}
                       / {UNIDADE_GRANDE[insumo.unidade_base]}
                     </td>
                     <td className="px-4 py-3 text-right">
