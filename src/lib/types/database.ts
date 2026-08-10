@@ -29,6 +29,8 @@ export type EntregaStatus = "pendente" | "saiu" | "entregue";
 
 export type TipoProduto = "cookie" | "box";
 
+export type OkrMetrica = "manual" | "vendas" | "cookies" | "pedidos" | "lucro";
+
 export interface Database {
   public: {
     Tables: {
@@ -256,6 +258,80 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["insumos"]["Insert"]>;
         Relationships: [];
+      };
+      custos_mensais: {
+        Row: {
+          id: string;
+          descricao: string;
+          valor: number;
+          competencia: string;
+          recorrente: boolean;
+          encerrado_em: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          descricao: string;
+          valor: number;
+          competencia: string;
+          recorrente?: boolean;
+          encerrado_em?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["custos_mensais"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      okrs: {
+        Row: {
+          id: string;
+          objetivo: string;
+          competencia: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          objetivo: string;
+          competencia: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["okrs"]["Insert"]>;
+        Relationships: [];
+      };
+      okr_resultados: {
+        Row: {
+          id: string;
+          okr_id: string;
+          descricao: string;
+          metrica: OkrMetrica;
+          alvo: number;
+          progresso_manual: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          okr_id: string;
+          descricao: string;
+          metrica?: OkrMetrica;
+          alvo: number;
+          progresso_manual?: number;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["okr_resultados"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "okr_resultados_okr_id_fkey";
+            columns: ["okr_id"];
+            isOneToOne: false;
+            referencedRelation: "okrs";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       insumo_lotes: {
         Row: {
