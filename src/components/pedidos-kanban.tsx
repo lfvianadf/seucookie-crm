@@ -44,7 +44,19 @@ export function PedidosKanban({
   pedidosIniciais: Pedido[];
   produtos: Produto[];
 }) {
+  // A cópia local existe pra mover o cartão na hora, sem esperar o servidor.
+  // Mas ela não pode ignorar dados novos: quando uma Server Action revalida a
+  // rota (pedido criado, editado, excluído), o servidor manda outra lista em
+  // pedidosIniciais e é ela que vale. Sincroniza durante o render, que é o
+  // padrão do React pra estado derivado de prop — em efeito, a tela ainda
+  // pintaria um frame com a lista velha.
   const [pedidos, setPedidos] = useState(pedidosIniciais);
+  const [listaDoServidor, setListaDoServidor] = useState(pedidosIniciais);
+  if (pedidosIniciais !== listaDoServidor) {
+    setListaDoServidor(pedidosIniciais);
+    setPedidos(pedidosIniciais);
+  }
+
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [colunaAlvo, setColunaAlvo] = useState<PedidoStatus | null>(null);
   const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState<string | null>(null);
