@@ -32,7 +32,7 @@ export function DashboardShell({
   }, [open]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutro-50 md:flex-row">
+    <div className="flex min-h-screen flex-col bg-neutro-50 md:h-screen md:flex-row md:overflow-hidden">
       <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/10 bg-berinjela px-4 py-3 md:hidden">
         <button
           type="button"
@@ -55,7 +55,7 @@ export function DashboardShell({
       )}
 
       <div
-        className={`fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out md:static md:z-auto md:flex md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out md:static md:z-auto md:flex md:h-screen md:shrink-0 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -66,7 +66,8 @@ export function DashboardShell({
         />
       </div>
 
-      <main className="min-w-0 flex-1 overflow-x-auto px-4 py-4 md:px-6 md:py-6">
+      {/* só o conteúdo rola: a sidebar fica fixa no desktop */}
+      <main className="min-w-0 flex-1 overflow-x-auto px-4 py-4 md:overflow-y-auto md:px-6 md:py-6">
         {children}
       </main>
     </div>

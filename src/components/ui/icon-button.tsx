@@ -27,7 +27,7 @@ export function IconButton({
   return (
     <button
       type="button"
-      className={`flex ${SIZE_CLASSES[size]} shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 ease-out ${TONE_CLASSES[tone]} ${className}`}
+      className={`flex ${SIZE_CLASSES[size]} shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 ease-out disabled:pointer-events-none disabled:opacity-30 ${TONE_CLASSES[tone]} ${className}`}
       {...props}
     >
       {children}

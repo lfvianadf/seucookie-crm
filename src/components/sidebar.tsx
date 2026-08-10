@@ -11,6 +11,8 @@ import {
   Package,
   BookOpen,
   Factory,
+  Wallet,
+  Target,
   X,
 } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
@@ -24,6 +26,8 @@ const LINKS = [
   { href: "/insumos", label: "Estoque", icon: Package },
   { href: "/insumos/receitas", label: "Receitas", icon: BookOpen },
   { href: "/insumos/producao", label: "Produções", icon: Factory },
+  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/okrs", label: "Metas", icon: Target },
 ];
 
 // o link ativo é o de href mais longo que casa com a rota atual — sem isso
@@ -49,7 +53,7 @@ export function Sidebar({
   const ativo = hrefAtivo(pathname);
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-berinjela text-white md:h-auto md:w-56 md:self-stretch">
+    <aside className="flex h-full w-64 shrink-0 flex-col bg-berinjela text-white md:w-56">
       <div className="flex items-center gap-2.5 px-4 py-5">
         <Image
           src="/logo-mascote.png"
@@ -74,7 +78,9 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-2">
+      {/* rola só a lista de links se a tela for baixa demais — o rodapé
+          com e-mail e sair fica sempre visível */}
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2">
         {LINKS.map((link) => {
           const active = link.href === ativo;
           const Icon = link.icon;
@@ -97,7 +103,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-4">
+      <div className="shrink-0 border-t border-white/10 px-4 py-4">
         <p className="mb-2 truncate text-xs text-white/40">{userEmail}</p>
         <form action={logout}>
           <LogoutButton />
