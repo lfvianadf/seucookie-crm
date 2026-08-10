@@ -259,6 +259,36 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["insumos"]["Insert"]>;
         Relationships: [];
       };
+      perdas: {
+        Row: {
+          id: string;
+          produto_id: string;
+          quantidade: number;
+          custo_unitario: number;
+          motivo: string | null;
+          data: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          produto_id: string;
+          quantidade: number;
+          custo_unitario: number;
+          motivo?: string | null;
+          data?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["perdas"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "perdas_produto_id_fkey";
+            columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       custos_mensais: {
         Row: {
           id: string;

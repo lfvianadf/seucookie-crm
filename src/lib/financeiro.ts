@@ -11,7 +11,10 @@ export type ResumoFinanceiro = {
   /** dinheiro que saiu comprando insumo no mês (lotes lançados) */
   comprasDeInsumo: number;
   custosFixos: number;
-  /** vendas − custo dos vendidos − custos fixos */
+  /** custo de produção do que se perdeu no mês */
+  perdas: number;
+  cookiesPerdidos: number;
+  /** vendas − custo dos vendidos − custos fixos − perdas */
   lucro: number;
   margemBruta: number;
   custos: {
@@ -44,6 +47,7 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     { data: pedidos },
     { data: producoes },
     { data: lotes },
+    { data: perdasDoMes },
     { data: custosMensais },
     { data: produtos },
     { data: receitas },
@@ -64,6 +68,11 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     supabase
       .from("insumo_lotes")
       .select("quantidade, preco_unitario")
+      .gte("data", inicio.toISOString())
+      .lt("data", fim.toISOString()),
+    supabase
+      .from("perdas")
+      .select("quantidade, custo_unitario")
       .gte("data", inicio.toISOString())
       .lt("data", fim.toISOString()),
     supabase.from("custos_mensais").select("*").order("descricao"),
@@ -122,7 +131,19 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     }));
 
   const custosFixos = custos.reduce((s, c) => s + c.valor, 0);
-  const lucro = vendas - custoDosVendidos - custosFixos;
+
+  // usa o custo congelado na perda, não o custo de receita de hoje — a perda
+  // aconteceu com o preço de insumo daquele momento
+  const perdas = (perdasDoMes ?? []).reduce(
+    (s, p) => s + Number(p.custo_unitario) * p.quantidade,
+    0
+  );
+  const cookiesPerdidos = (perdasDoMes ?? []).reduce(
+    (s, p) => s + p.quantidade,
+    0
+  );
+
+  const lucro = vendas - custoDosVendidos - custosFixos - perdas;
 
   return {
     vendas,
@@ -131,6 +152,8 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     custoDosVendidos,
     comprasDeInsumo,
     custosFixos,
+    perdas,
+    cookiesPerdidos,
     lucro,
     margemBruta: vendas > 0 ? ((vendas - custoDosVendidos) / vendas) * 100 : 0,
     custos,

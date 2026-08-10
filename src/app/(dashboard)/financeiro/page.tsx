@@ -7,8 +7,13 @@ import {
   Plus,
   Pencil,
   CircleSlash,
+  TriangleAlert,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 import { carregarFinanceiro } from "@/lib/financeiro";
+import { intervaloDoMes } from "@/lib/competencia";
+import { excluirPerda } from "@/lib/actions/perdas";
+import { PerdaModal } from "@/components/perda-modal";
 import { mesAtual, rotuloMes } from "@/lib/competencia";
 import { encerrarCustoMensal, excluirCustoMensal } from "@/lib/actions/financeiro";
 import { SeletorMes } from "@/components/seletor-mes";
@@ -32,7 +37,23 @@ export default async function FinanceiroPage({
 }) {
   const { mes: mesParam } = await searchParams;
   const mes = mesParam ?? mesAtual();
-  const f = await carregarFinanceiro(mes);
+  const { inicio, fim } = intervaloDoMes(mes);
+  const supabase = await createClient();
+
+  const [f, { data: perdas }, { data: produtos }] = await Promise.all([
+    carregarFinanceiro(mes),
+    supabase
+      .from("perdas")
+      .select("id, quantidade, custo_unitario, motivo, data, produtos(nome)")
+      .gte("data", inicio.toISOString())
+      .lt("data", fim.toISOString())
+      .order("data", { ascending: false }),
+    supabase
+      .from("produtos")
+      .select("id, nome, qtd_estoque")
+      .eq("tipo_produto", "cookie")
+      .order("nome"),
+  ]);
 
   return (
     <div>
@@ -40,15 +61,26 @@ export default async function FinanceiroPage({
         title="Financeiro"
         description="Vendas, custos e lucro do mês."
         action={
-          <CustoMensalModal
-            mes={mes}
-            trigger={
-              <Button className="w-full sm:w-auto">
-                <Plus className="h-4 w-4" strokeWidth={2} />
-                Novo custo
-              </Button>
-            }
-          />
+          <>
+            <PerdaModal
+              produtos={produtos ?? []}
+              trigger={
+                <Button variant="secondary" className="w-full sm:w-auto">
+                  <TriangleAlert className="h-4 w-4" strokeWidth={1.75} />
+                  Perda
+                </Button>
+              }
+            />
+            <CustoMensalModal
+              mes={mes}
+              trigger={
+                <Button className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4" strokeWidth={2} />
+                  Novo custo
+                </Button>
+              }
+            />
+          </>
         }
       />
 
@@ -79,11 +111,21 @@ export default async function FinanceiroPage({
           hint="lançados neste mês"
         />
         <StatTile
+          label="Perdas"
+          value={reais(f.perdas)}
+          icon={TriangleAlert}
+          tone={f.perdas > 0 ? "atencao" : "neutral"}
+          hint={`${f.cookiesPerdidos} cookie${f.cookiesPerdidos === 1 ? "" : "s"}, a custo de produção`}
+        />
+      </div>
+
+      <div className="mb-4">
+        <StatTile
           label="Lucro"
           value={reais(f.lucro)}
           icon={TrendingUp}
           tone={f.lucro < 0 ? "erro" : "neutral"}
-          hint="vendas − custo do vendido − fixos"
+          hint="vendas − custo do vendido − fixos − perdas"
         />
       </div>
 
@@ -105,6 +147,45 @@ export default async function FinanceiroPage({
           estoca muito tem compra alta sem a margem ter piorado.
         </p>
       </div>
+
+      {perdas && perdas.length > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-white">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold text-berinjela">
+              Perdas de {rotuloMes(mes)}
+            </h2>
+            <span className="text-xs text-neutro-500">{reais(f.perdas)}</span>
+          </div>
+          <ul className="divide-y divide-border">
+            {perdas.map((perda) => (
+              <li key={perda.id} className="group flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-berinjela">
+                    {perda.quantidade}x {perda.produtos?.nome ?? "—"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-neutro-500">
+                    {new Date(perda.data).toLocaleDateString("pt-BR")}
+                    {perda.motivo ? ` · ${perda.motivo}` : ""}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-atencao-text">
+                  {reais(Number(perda.custo_unitario) * perda.quantidade)}
+                </span>
+                <div className="shrink-0 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                  <ConfirmDeleteButton
+                    itemName={`a perda de ${perda.quantidade}x ${perda.produtos?.nome ?? "cookie"}`}
+                    label="Perda"
+                    onConfirm={excluirPerda.bind(null, perda.id)}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="border-t border-border px-4 py-2.5 text-xs text-neutro-500">
+            Excluir devolve os cookies ao estoque.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-xl border border-border bg-white">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
