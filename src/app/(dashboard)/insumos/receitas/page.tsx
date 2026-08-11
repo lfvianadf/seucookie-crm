@@ -1,6 +1,6 @@
 import { ClipboardList, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { excluirReceita } from "@/lib/actions/receitas";
+import { excluirReceita, duplicarReceita } from "@/lib/actions/receitas";
 import { ReceitaModal } from "@/components/receita-modal";
 import { ReceitaCard } from "@/components/receita-card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,7 @@ export default async function ReceitasPage() {
               receita={receita}
               insumos={insumosLista}
               onExcluir={excluirReceita.bind(null, receita.id)}
+              onDuplicar={duplicarReceita.bind(null, receita.id)}
             />
           ))}
         </div>

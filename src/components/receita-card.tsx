@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Pencil, Trash2, Copy } from "lucide-react";
 import { ReceitaModal } from "@/components/receita-modal";
 import { ReceitaCustoModal } from "@/components/receita-custo-modal";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { IconButton } from "@/components/ui/icon-button";
+import { useToast } from "@/components/ui/toast";
 import type { ItemCusto } from "@/lib/receita-custo";
 import type { IngredienteReceita } from "@/lib/actions/receitas";
 import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
@@ -33,10 +34,12 @@ export function ReceitaCard({
   receita,
   insumos,
   onExcluir,
+  onDuplicar,
 }: {
   receita: Receita;
   insumos: Insumo[];
   onExcluir: () => Promise<void>;
+  onDuplicar: () => Promise<void>;
 }) {
   // os três modais são controlados aqui pra que abrir um feche o outro —
   // no mobile editar/excluir saem de dentro do modal de custo, e empilhar
@@ -44,6 +47,16 @@ export function ReceitaCard({
   const [custoAberto, setCustoAberto] = useState(false);
   const [edicaoAberta, setEdicaoAberta] = useState(false);
   const [exclusaoAberta, setExclusaoAberta] = useState(false);
+  const [duplicando, startDuplicar] = useTransition();
+  const toast = useToast();
+
+  function duplicar() {
+    setCustoAberto(false);
+    startDuplicar(async () => {
+      await onDuplicar();
+      toast("Receita duplicada");
+    });
+  }
 
   function abrirEdicao() {
     setCustoAberto(false);
@@ -77,6 +90,14 @@ export function ReceitaCard({
             <Pencil className="h-4 w-4" strokeWidth={1.75} />
           </IconButton>
           <IconButton
+            aria-label={`Duplicar ${receita.nome}`}
+            title="Duplicar"
+            onClick={duplicar}
+            disabled={duplicando}
+          >
+            <Copy className="h-4 w-4" strokeWidth={1.75} />
+          </IconButton>
+          <IconButton
             tone="destructive"
             aria-label={`Excluir ${receita.nome}`}
             title="Excluir"
@@ -105,6 +126,15 @@ export function ReceitaCard({
               onClick={abrirEdicao}
             >
               <Pencil className="h-4 w-4" strokeWidth={1.75} />
+            </IconButton>
+            <IconButton
+              aria-label={`Duplicar ${receita.nome}`}
+              title="Duplicar"
+              size="toque"
+              onClick={duplicar}
+              disabled={duplicando}
+            >
+              <Copy className="h-4 w-4" strokeWidth={1.75} />
             </IconButton>
             <IconButton
               tone="destructive"
