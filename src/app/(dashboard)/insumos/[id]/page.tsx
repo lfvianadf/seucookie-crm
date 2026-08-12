@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Factory, Plus } from "lucide-react";
+import { ChevronLeft, Factory, Plus, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { EntradaInsumoModal } from "@/components/entrada-insumo-modal";
+import { LoteModal } from "@/components/lote-modal";
+import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { UNIDADE_GRANDE } from "@/lib/unidade";
 
@@ -130,6 +132,23 @@ export default async function InsumoDetalhePage({
                           {insumo.unidade_base}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end">
+                        <LoteModal
+                          lote={lote}
+                          insumoId={insumo.id}
+                          unidadeBase={insumo.unidade_base}
+                          trigger={
+                            <IconButton
+                              aria-label="Corrigir entrada"
+                              title="Corrigir entrada"
+                            >
+                              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                            </IconButton>
+                          }
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

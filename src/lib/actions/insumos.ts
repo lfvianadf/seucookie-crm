@@ -80,6 +80,50 @@ export async function registrarEntradaInsumo(params: {
   revalidatePath("/insumos/receitas");
 }
 
+/**
+ * Corrige um lote já lançado (digitou R$ 10 e era R$ 100).
+ *
+ * A validação de quantidade mora no banco: se o lote já foi consumido, não
+ * dá pra reduzi-lo abaixo do que virou cookie, e a função devolve o mínimo
+ * permitido em vez de inventar de onde tirar a diferença.
+ */
+export async function editarLoteInsumo(params: {
+  loteId: string;
+  insumoId: string;
+  quantidade: number;
+  valorPago: number;
+  data?: string;
+}) {
+  const { loteId, insumoId, quantidade, valorPago, data } = params;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("editar_lote_insumo", {
+    p_lote_id: loteId,
+    p_quantidade: quantidade,
+    p_valor_pago: valorPago,
+    p_data: data ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/insumos");
+  revalidatePath(`/insumos/${insumoId}`);
+  revalidatePath("/insumos/receitas");
+}
+
+export async function excluirLoteInsumo(loteId: string, insumoId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("excluir_lote_insumo", {
+    p_lote_id: loteId,
+  });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/insumos");
+  revalidatePath(`/insumos/${insumoId}`);
+  revalidatePath("/insumos/receitas");
+}
+
 export async function excluirInsumo(id: string) {
   const supabase = await createClient();
   await supabase.from("insumos").delete().eq("id", id);

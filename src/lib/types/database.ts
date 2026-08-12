@@ -31,6 +31,8 @@ export type TipoProduto = "cookie" | "box";
 
 export type OkrMetrica = "manual" | "vendas" | "cookies" | "pedidos" | "lucro";
 
+export type TipoCusto = "unica" | "recorrente" | "parcelado";
+
 export interface Database {
   public: {
     Tables: {
@@ -295,6 +297,9 @@ export interface Database {
           descricao: string;
           valor: number;
           competencia: string;
+          tipo: TipoCusto;
+          parcelas: number | null;
+          /** @deprecated substituído por `tipo` */
           recorrente: boolean;
           encerrado_em: string | null;
           created_at: string;
@@ -305,6 +310,8 @@ export interface Database {
           descricao: string;
           valor: number;
           competencia: string;
+          tipo?: TipoCusto;
+          parcelas?: number | null;
           recorrente?: boolean;
           encerrado_em?: string | null;
           created_at?: string;
@@ -651,6 +658,19 @@ export interface Database {
           p_data?: string | null;
         };
         Returns: string;
+      };
+      editar_lote_insumo: {
+        Args: {
+          p_lote_id: string;
+          p_quantidade: number;
+          p_valor_pago: number;
+          p_data: string | null;
+        };
+        Returns: undefined;
+      };
+      excluir_lote_insumo: {
+        Args: { p_lote_id: string };
+        Returns: undefined;
       };
       estornar_producao: {
         Args: { p_producao_id: string };
