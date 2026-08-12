@@ -17,6 +17,18 @@ export type ResumoFinanceiro = {
   cookiesPerdidos: number;
   /** vendas − custo dos vendidos − custos fixos − perdas */
   lucro: number;
+  /**
+   * Estoque parado de cookies, AGORA — não é do mês selecionado como o
+   * resto. O que está na prateleira é o que está, independente de qual mês
+   * você esteja olhando.
+   */
+  estoque: {
+    cookies: number;
+    /** quanto custou produzir o que está parado */
+    custo: number;
+    /** quanto entra se vender tudo pelo preço de tabela */
+    venda: number;
+  };
   margemBruta: number;
   custos: {
     id: string;
@@ -79,7 +91,9 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
       .gte("data", inicio.toISOString())
       .lt("data", fim.toISOString()),
     supabase.from("custos_mensais").select("*").order("descricao"),
-    supabase.from("produtos").select("id, receita_id"),
+    supabase
+      .from("produtos")
+      .select("id, receita_id, preco, qtd_estoque, tipo_produto"),
     supabase.from("receitas").select("id, rendimento_cookies"),
     supabase.from("receita_insumos").select("*"),
     supabase.from("insumos").select("*"),
@@ -150,6 +164,24 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
 
   const lucro = vendas - custoDosVendidos - custosFixos - perdas;
 
+  // Só cookies: a box não tem estoque próprio, ela é composta na hora do
+  // pedido a partir dos cookies. Somá-la contaria o mesmo cookie duas vezes.
+  const cookiesEmEstoque = (produtos ?? []).filter(
+    (p) => p.tipo_produto === "cookie"
+  );
+
+  const estoque = cookiesEmEstoque.reduce(
+    (acc, p) => {
+      const qtd = Number(p.qtd_estoque) || 0;
+      return {
+        cookies: acc.cookies + qtd,
+        custo: acc.custo + (custoPorProduto.get(p.id) ?? 0) * qtd,
+        venda: acc.venda + Number(p.preco) * qtd,
+      };
+    },
+    { cookies: 0, custo: 0, venda: 0 }
+  );
+
   return {
     vendas,
     pedidos: pedidosLista.length,
@@ -160,6 +192,7 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     perdas,
     cookiesPerdidos,
     lucro,
+    estoque,
     margemBruta: vendas > 0 ? ((vendas - custoDosVendidos) / vendas) * 100 : 0,
     custos,
   };

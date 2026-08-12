@@ -8,6 +8,7 @@ import {
   Pencil,
   CircleSlash,
   TriangleAlert,
+  Boxes,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { carregarFinanceiro } from "@/lib/financeiro";
@@ -130,21 +131,59 @@ export default async function FinanceiroPage({
       </div>
 
       <div className="mb-6 rounded-xl border border-border bg-white p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-neutro-500">
-              <ShoppingCart className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-              Compras de insumo no mês (caixa)
-            </p>
-            <p className="text-xl font-semibold text-berinjela">
-              {reais(f.comprasDeInsumo)}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-neutro-500">
+            <ShoppingCart className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+            Compras de insumo no mês (caixa)
+          </p>
+          <p className="text-xl font-semibold text-berinjela">
+            {reais(f.comprasDeInsumo)}
+          </p>
         </div>
         <p className="mt-2 text-xs text-neutro-500">
           Quanto saiu do bolso repondo estoque. Não entra no lucro acima — lá o
           que conta é o custo do que foi <em>vendido</em>. Um mês em que você
           estoca muito tem compra alta sem a margem ter piorado.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-border bg-white p-4">
+        <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-neutro-500">
+          <Boxes className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          Cookies parados em estoque — hoje
+        </p>
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+              Quantidade
+            </p>
+            <p className="text-xl font-semibold text-berinjela">
+              {f.estoque.cookies.toLocaleString("pt-BR")}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+              Custou
+            </p>
+            <p className="text-xl font-semibold text-berinjela">
+              {reais(f.estoque.custo)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+              Vale (venda)
+            </p>
+            <p className="text-xl font-semibold text-salvia-text">
+              {reais(f.estoque.venda)}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-neutro-500">
+          Diferente dos números acima, esta é a foto de <em>agora</em>, não do
+          mês escolhido — é o que está na prateleira. Só cookies: a box não tem
+          estoque próprio, é montada na hora do pedido.
         </p>
       </div>
 
