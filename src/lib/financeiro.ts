@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { intervaloDoMes, custoValeNoMes } from "@/lib/competencia";
+import { intervaloDoMes, parcelaDoMes } from "@/lib/competencia";
 import { calcularCustoReceita } from "@/lib/receita-custo";
+import type { TipoCusto } from "@/lib/types/database";
 
 export type ResumoFinanceiro = {
   vendas: number;
@@ -21,7 +22,9 @@ export type ResumoFinanceiro = {
     id: string;
     descricao: string;
     valor: number;
-    recorrente: boolean;
+    tipo: TipoCusto;
+    /** "3 de 10" em parcelado; null nos demais */
+    parcela: { numero: number; total: number | null } | null;
     /** true quando vem repetido de um mês anterior, não lançado neste */
     herdado: boolean;
   }[];
@@ -121,12 +124,14 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
   }, 0);
 
   const custos = (custosMensais ?? [])
-    .filter((c) => custoValeNoMes(c, mes))
-    .map((c) => ({
+    .map((c) => ({ custo: c, parcela: parcelaDoMes(c, mes) }))
+    .filter((x) => x.parcela !== null)
+    .map(({ custo: c, parcela }) => ({
       id: c.id,
       descricao: c.descricao,
       valor: Number(c.valor),
-      recorrente: c.recorrente,
+      tipo: c.tipo,
+      parcela,
       herdado: c.competencia.slice(0, 7) !== mes,
     }));
 

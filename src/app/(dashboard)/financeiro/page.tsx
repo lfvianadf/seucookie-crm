@@ -208,14 +208,24 @@ export default async function FinanceiroPage({
                   <p className="truncate text-sm font-medium text-berinjela">
                     {custo.descricao}
                   </p>
-                  {custo.recorrente && (
+                  {custo.tipo === "parcelado" && custo.parcela && (
+                    <p className="mt-0.5 text-xs text-neutro-500">
+                      Parcela {custo.parcela.numero} de {custo.parcela.total}
+                    </p>
+                  )}
+                  {custo.tipo === "recorrente" && (
                     <p className="mt-0.5 text-xs text-neutro-500">
                       {custo.herdado ? "Repetido de um mês anterior" : "Repete todo mês"}
                     </p>
                   )}
                 </div>
 
-                {custo.recorrente && <Badge tone="neutral">mensal</Badge>}
+                {custo.tipo === "recorrente" && <Badge tone="neutral">mensal</Badge>}
+                {custo.tipo === "parcelado" && custo.parcela && (
+                  <Badge tone="neutral">
+                    {custo.parcela.numero}/{custo.parcela.total}
+                  </Badge>
+                )}
 
                 <span className="shrink-0 text-sm font-semibold text-berinjela">
                   {reais(custo.valor)}
@@ -234,7 +244,7 @@ export default async function FinanceiroPage({
                       </IconButton>
                     }
                   />
-                  {custo.recorrente ? (
+                  {custo.tipo === "recorrente" ? (
                     // encerrar em vez de excluir: para de repetir daqui pra
                     // frente sem apagar os meses em que o custo existiu
                     <form action={encerrarCustoMensal.bind(null, custo.id, mes)}>

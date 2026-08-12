@@ -8,12 +8,20 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { criarCustoMensal, atualizarCustoMensal } from "@/lib/actions/financeiro";
 import { rotuloMes } from "@/lib/competencia";
+import type { TipoCusto } from "@/lib/types/database";
+
+const TIPO_LABEL: Record<TipoCusto, string> = {
+  unica: "Uma vez",
+  recorrente: "Todo mês",
+  parcelado: "Parcelado",
+};
 
 type CustoExistente = {
   id: string;
   descricao: string;
   valor: number;
-  recorrente: boolean;
+  tipo: TipoCusto;
+  parcela: { numero: number; total: number | null } | null;
 };
 
 export function CustoMensalModal({
@@ -26,6 +34,7 @@ export function CustoMensalModal({
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [tipo, setTipo] = useState<TipoCusto>(custoExistente?.tipo ?? "unica");
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -85,7 +94,9 @@ export function CustoMensalModal({
             </div>
 
             <div>
-              <Label htmlFor="custo-valor">Valor (R$)</Label>
+              <Label htmlFor="custo-valor">
+                {tipo === "parcelado" ? "Valor da parcela (R$)" : "Valor (R$)"}
+              </Label>
               <Input
                 id="custo-valor"
                 name="valor"
@@ -98,21 +109,51 @@ export function CustoMensalModal({
               />
             </div>
 
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border-strong px-3 py-2.5">
-              <input
-                type="checkbox"
-                name="recorrente"
-                defaultChecked={custoExistente?.recorrente}
-                className="mt-0.5 h-4 w-4 accent-rosa"
-              />
-              <span className="text-sm text-berinjela">
-                Repete todo mês
-                <span className="mt-0.5 block text-xs text-neutro-500">
-                  Aparece sozinho nos próximos meses. Dá pra encerrar depois
-                  sem perder o histórico.
-                </span>
-              </span>
-            </label>
+            <div>
+              <Label>Como se repete</Label>
+              {/* botões em vez de select: são três opções e a escolha muda o
+                  resto do formulário, então precisa estar toda à vista */}
+              <div className="flex gap-2">
+                {(Object.keys(TIPO_LABEL) as TipoCusto[]).map((valor) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => setTipo(valor)}
+                    className={`min-h-11 flex-1 cursor-pointer rounded-lg border px-2 text-sm font-medium transition-colors duration-150 ${
+                      tipo === valor
+                        ? "border-rosa bg-rosa/10 text-berinjela"
+                        : "border-border-strong text-neutro-500 hover:bg-berinjela-50"
+                    }`}
+                  >
+                    {TIPO_LABEL[valor]}
+                  </button>
+                ))}
+              </div>
+              <input type="hidden" name="tipo" value={tipo} />
+              <p className="mt-1.5 text-xs text-neutro-500">
+                {tipo === "unica" && "Cai só neste mês."}
+                {tipo === "recorrente" &&
+                  "Aparece sozinho todo mês. Dá pra encerrar depois sem perder o histórico."}
+                {tipo === "parcelado" &&
+                  "Aparece pelos próximos meses e some sozinho quando acabar."}
+              </p>
+            </div>
+
+            {tipo === "parcelado" && (
+              <div>
+                <Label htmlFor="custo-parcelas">Número de parcelas</Label>
+                <Input
+                  id="custo-parcelas"
+                  name="parcelas"
+                  type="number"
+                  min={2}
+                  inputMode="numeric"
+                  defaultValue={custoExistente?.parcela?.total ?? ""}
+                  placeholder="ex: 10"
+                  required
+                />
+              </div>
+            )}
           </FieldGroup>
 
           {erro && (

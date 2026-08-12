@@ -56,22 +56,45 @@ export function ultimosMeses(quantidade: number) {
   );
 }
 
+/** Quantos meses de `origem` até `mes`. Negativo se `mes` for anterior. */
+export function distanciaEmMeses(origem: string, mes: string) {
+  const [anoO, mO] = origem.split("-").map(Number);
+  const [anoM, mM] = mes.split("-").map(Number);
+  return (anoM - anoO) * 12 + (mM - mO);
+}
+
+type CustoCompetencia = {
+  competencia: string;
+  tipo: "unica" | "recorrente" | "parcelado";
+  parcelas: number | null;
+  encerrado_em: string | null;
+};
+
 /**
- * Um custo pertence ao mês se foi lançado nele, ou se é recorrente e o mês
- * está entre a competência de origem e o encerramento.
+ * Em que mês um custo aparece, e — se parcelado — qual parcela é.
  *
- * A recorrência é projetada aqui em vez de gerar linhas futuras no banco:
- * assim editar o valor de um custo mensal não exige caçar doze cópias, e
- * encerrar não deixa lançamentos órfãos no futuro.
+ * A repetição é projetada aqui em vez de gerar linhas futuras no banco:
+ * assim corrigir o valor de uma conta em 10x não exige caçar dez cópias, e
+ * encerrar uma recorrente não deixa lançamentos órfãos no futuro.
+ *
+ * Retorna null quando o custo não vale naquele mês.
  */
-export function custoValeNoMes(
-  custo: { competencia: string; recorrente: boolean; encerrado_em: string | null },
-  mes: string
-) {
+export function parcelaDoMes(custo: CustoCompetencia, mes: string) {
   const origem = custo.competencia.slice(0, 7);
-  if (origem === mes) return true;
-  if (!custo.recorrente) return false;
-  if (mes < origem) return false;
-  if (custo.encerrado_em && mes > custo.encerrado_em.slice(0, 7)) return false;
-  return true;
+  const distancia = distanciaEmMeses(origem, mes);
+
+  if (distancia < 0) return null;
+
+  if (custo.tipo === "unica") {
+    return distancia === 0 ? { numero: 1, total: 1 } : null;
+  }
+
+  if (custo.tipo === "parcelado") {
+    const total = custo.parcelas ?? 1;
+    return distancia < total ? { numero: distancia + 1, total } : null;
+  }
+
+  // recorrente: vai até ser encerrado
+  if (custo.encerrado_em && mes > custo.encerrado_em.slice(0, 7)) return null;
+  return { numero: distancia + 1, total: null };
 }
