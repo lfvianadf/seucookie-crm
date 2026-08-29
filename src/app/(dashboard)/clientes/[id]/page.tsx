@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Phone, MapPin, ClipboardList } from "lucide-react";
+import { ChevronLeft, Phone, MapPin, ClipboardList, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ClienteModal } from "@/components/cliente-modal";
+import { formatarTelefone } from "@/lib/telefone";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/pedido-status";
 import { calcularFidelidade } from "@/lib/fidelidade";
 import { CartaoFidelidade } from "@/components/cartao-fidelidade";
@@ -56,11 +59,22 @@ export default async function ClienteDetalhePage({
         Clientes
       </Link>
 
-      <h1 className="mb-1 text-2xl font-semibold text-berinjela">{cliente.nome}</h1>
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-berinjela">{cliente.nome}</h1>
+        <ClienteModal
+          clienteExistente={cliente}
+          trigger={
+            <Button variant="secondary" className="min-h-11">
+              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+              Editar
+            </Button>
+          }
+        />
+      </div>
       <div className="mb-6 space-y-0.5">
         <p className="flex items-center gap-1.5 text-sm text-neutro-600">
           <Phone className="h-3.5 w-3.5 shrink-0 text-neutro-400" strokeWidth={1.75} />
-          {cliente.telefone}
+          {formatarTelefone(cliente.telefone)}
         </p>
         {cliente.endereco && (
           <p className="flex items-center gap-1.5 text-sm text-neutro-600">

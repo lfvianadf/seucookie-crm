@@ -8,8 +8,10 @@ import {
   buscarClientesPorNome,
 } from "@/lib/actions/clientes";
 import { Label, Input, Textarea } from "@/components/ui/field";
+import { InputTelefone } from "@/components/ui/input-telefone";
 import { Button } from "@/components/ui/button";
 import { calcularPrecoBox, totalEscolhido } from "@/lib/preco-box";
+import { telefoneValido, formatarTelefone } from "@/lib/telefone";
 import type { TipoProduto } from "@/lib/types/database";
 
 type Produto = {
@@ -226,6 +228,10 @@ export function NovoPedidoForm({
       setErro("Nome e telefone do cliente são obrigatórios.");
       return;
     }
+    if (!telefoneValido(telefone)) {
+      setErro("Telefone incompleto — precisa do DDD e 8 ou 9 dígitos.");
+      return;
+    }
     if (itensCarrinho.length === 0 && caixas.length === 0) {
       setErro("Adicione ao menos um item ao pedido.");
       return;
@@ -276,13 +282,11 @@ export function NovoPedidoForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="pedido-telefone">Telefone</Label>
-              <Input
+              <InputTelefone
                 id="pedido-telefone"
                 value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
+                onChange={setTelefone}
                 onBlur={handleTelefoneBlur}
-                inputMode="tel"
-                placeholder="(11) 90000-0000"
                 autoFocus
               />
             </div>
@@ -306,7 +310,7 @@ export function NovoPedidoForm({
                         className="flex w-full flex-col items-start px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-berinjela-50"
                       >
                         <span className="font-medium text-berinjela">{cliente.nome}</span>
-                        <span className="text-xs text-neutro-500">{cliente.telefone}</span>
+                        <span className="text-xs text-neutro-500">{formatarTelefone(cliente.telefone)}</span>
                       </button>
                     </li>
                   ))}

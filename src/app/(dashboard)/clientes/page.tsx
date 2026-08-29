@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { NovoClienteModal } from "@/components/novo-cliente-modal";
+import { ClienteModal } from "@/components/cliente-modal";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { IconButton } from "@/components/ui/icon-button";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
+import { excluirCliente } from "@/lib/actions/clientes";
+import { formatarTelefone } from "@/lib/telefone";
 
 export default async function ClientesPage({
   searchParams,
@@ -20,7 +24,12 @@ export default async function ClientesPage({
     .order("nome", { ascending: true });
 
   if (q) {
-    query = query.or(`telefone.ilike.%${q}%,nome.ilike.%${q}%`);
+    // busca por telefone ignora a máscara: quem digita "(84) 9" precisa
+    // encontrar o cliente gravado como "849..."
+    const digitos = q.replace(/\D/g, "");
+    query = digitos
+      ? query.or(`telefone.ilike.%${digitos}%,nome.ilike.%${q}%`)
+      : query.ilike("nome", `%${q}%`);
   }
 
   const [{ data: clientes }, { data: pedidosDosClientes }] = await Promise.all([
@@ -44,7 +53,7 @@ export default async function ClientesPage({
       <PageHeader
         title="Clientes"
         description="O telefone é a chave — é como você reencontra o cliente."
-        action={<NovoClienteModal />}
+        action={<ClienteModal />}
       />
 
       <form className="mb-5" method="get">
@@ -68,24 +77,43 @@ export default async function ClientesPage({
           {clientes.map((cliente) => {
             const total = totalPorCliente.get(cliente.id) ?? 0;
             return (
-              <Link
+              <div
                 key={cliente.id}
-                href={`/clientes/${cliente.id}`}
-                className="block rounded-xl border border-border bg-white p-3"
+                className="rounded-xl border border-border bg-white p-3"
               >
                 <div className="mb-1 flex items-start justify-between gap-2">
-                  <p className="min-w-0 flex-1 truncate text-sm font-medium text-berinjela">
+                  <Link
+                    href={`/clientes/${cliente.id}`}
+                    className="min-w-0 flex-1 truncate text-sm font-medium text-berinjela"
+                  >
                     {cliente.nome}
-                  </p>
-                  {total > 1 && (
-                    <Badge tone="salvia">{total} pedidos</Badge>
-                  )}
+                  </Link>
+                  {total > 1 && <Badge tone="salvia">{total} pedidos</Badge>}
                 </div>
                 <p className="text-xs text-neutro-500">
-                  {cliente.telefone}
+                  {formatarTelefone(cliente.telefone)}
                   {cliente.endereco ? ` · ${cliente.endereco}` : ""}
                 </p>
-              </Link>
+                <div className="mt-2 flex items-center justify-end gap-1 border-t border-border pt-2">
+                  <ClienteModal
+                    clienteExistente={cliente}
+                    trigger={
+                      <IconButton
+                        aria-label={`Editar ${cliente.nome}`}
+                        title="Editar"
+                        size="toque"
+                      >
+                        <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                      </IconButton>
+                    }
+                  />
+                  <ConfirmDeleteButton
+                    itemName={cliente.nome}
+                    size="toque"
+                    onConfirm={excluirCliente.bind(null, cliente.id)}
+                  />
+                </div>
+              </div>
             );
           })}
         </div>
@@ -106,6 +134,7 @@ export default async function ClientesPage({
                 <th className="px-4 py-3 text-right text-xs font-semibold text-neutro-500">
                   Pedidos
                 </th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -114,7 +143,7 @@ export default async function ClientesPage({
                 return (
                   <tr
                     key={cliente.id}
-                    className="border-b border-border transition-colors duration-150 last:border-0 hover:bg-berinjela-50/60"
+                    className="group border-b border-border transition-colors duration-150 last:border-0 hover:bg-berinjela-50/60"
                   >
                     <td className="px-4 py-3 font-medium text-berinjela">
                       <Link
@@ -124,7 +153,9 @@ export default async function ClientesPage({
                         {cliente.nome}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-neutro-700">{cliente.telefone}</td>
+                    <td className="px-4 py-3 text-neutro-700">
+                      {formatarTelefone(cliente.telefone)}
+                    </td>
                     <td className="px-4 py-3 text-neutro-500">
                       {cliente.endereco ?? "—"}
                     </td>
@@ -134,6 +165,25 @@ export default async function ClientesPage({
                       ) : (
                         <span className="text-neutro-500">{total}</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                        <ClienteModal
+                          clienteExistente={cliente}
+                          trigger={
+                            <IconButton
+                              aria-label={`Editar ${cliente.nome}`}
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                            </IconButton>
+                          }
+                        />
+                        <ConfirmDeleteButton
+                          itemName={cliente.nome}
+                          onConfirm={excluirCliente.bind(null, cliente.id)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -150,7 +200,7 @@ export default async function ClientesPage({
               ? "Nenhum cliente encontrado."
               : "Nenhum cliente ainda. Crie o primeiro."
           }
-          action={!q ? <NovoClienteModal /> : undefined}
+          action={!q ? <ClienteModal /> : undefined}
         />
       )}
     </div>

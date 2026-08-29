@@ -5,6 +5,7 @@ import { Phone, MapPin, Pencil, X, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatarTelefone } from "@/lib/telefone";
 import { IconButton } from "@/components/ui/icon-button";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { Select, Textarea } from "@/components/ui/field";
@@ -239,7 +240,7 @@ export function PedidoDetalheModal({
             {pedido.clientes?.telefone && (
               <p className="mb-1 flex items-center gap-1.5 text-sm text-neutro-700">
                 <Phone className="h-3.5 w-3.5 shrink-0 text-neutro-400" strokeWidth={1.75} />
-                {pedido.clientes.telefone}
+                {formatarTelefone(pedido.clientes.telefone)}
               </p>
             )}
             {pedido.clientes?.endereco && (
