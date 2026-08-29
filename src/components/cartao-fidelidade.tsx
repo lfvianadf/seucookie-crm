@@ -1,5 +1,6 @@
-import { Cookie, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 import { META_FIDELIDADE, type Fidelidade } from "@/lib/fidelidade";
+import { cartaoFidelidadeSvg } from "@/lib/cartao-svg";
 
 /**
  * O cartão de papel traduzido pra tela.
@@ -18,7 +19,7 @@ export function CartaoFidelidade({
   fidelidade: Fidelidade;
   compacto?: boolean;
 }) {
-  const { carimbos, cortesias } = fidelidade;
+  const { cortesias } = fidelidade;
   const temCortesia = cortesias > 0;
 
   return (
@@ -41,31 +42,17 @@ export function CartaoFidelidade({
         )}
       </div>
 
-      {/* dez círculos, como no cartão de papel: dá pra ler o progresso sem
-          processar número nenhum */}
+      {/* o mesmo SVG que vai pro cliente — um desenho só, pra tela e
+          WhatsApp nunca mostrarem coisas diferentes */}
       <div
-        className={`grid grid-cols-5 gap-2 ${compacto ? "max-w-56" : "max-w-72"}`}
-      >
-        {Array.from({ length: META_FIDELIDADE }).map((_, i) => {
-          const preenchido = i < carimbos;
-          return (
-            <div
-              key={i}
-              className={`flex aspect-square items-center justify-center rounded-full border text-xs font-medium ${
-                preenchido
-                  ? "border-berinjela bg-berinjela text-white"
-                  : "border-border-strong text-neutro-300"
-              }`}
-            >
-              {preenchido ? (
-                <Cookie className="h-4 w-4" strokeWidth={1.75} />
-              ) : (
-                i + 1
-              )}
-            </div>
-          );
-        })}
-      </div>
+        className={compacto ? "max-w-sm" : ""}
+        dangerouslySetInnerHTML={{
+          __html: cartaoFidelidadeSvg(nome, fidelidade).replace(
+            /width="\d+" height="\d+"/,
+            'width="100%" height="auto"'
+          ),
+        }}
+      />
 
       <p className="mt-3 text-xs text-neutro-500">
         {fidelidade.saldo} cookie{fidelidade.saldo === 1 ? "" : "s"} comprado
