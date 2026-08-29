@@ -261,6 +261,34 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["insumos"]["Insert"]>;
         Relationships: [];
       };
+      fidelidade_resgates: {
+        Row: {
+          id: string;
+          cliente_id: string;
+          cookies_usados: number;
+          data: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          cliente_id: string;
+          cookies_usados?: number;
+          data?: string;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["fidelidade_resgates"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "fidelidade_resgates_cliente_id_fkey";
+            columns: ["cliente_id"];
+            isOneToOne: false;
+            referencedRelation: "clientes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       perdas: {
         Row: {
           id: string;
@@ -629,7 +657,19 @@ export interface Database {
         ];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      fidelidade_clientes: {
+        Row: {
+          cliente_id: string;
+          nome: string;
+          telefone: string;
+          cookies_comprados: number;
+          cookies_resgatados: number;
+          cookies_no_cartao: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       registrar_producao: {
         Args: {

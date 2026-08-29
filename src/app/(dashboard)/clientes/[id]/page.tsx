@@ -4,6 +4,9 @@ import { ChevronLeft, Phone, MapPin, ClipboardList } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/pedido-status";
+import { calcularFidelidade } from "@/lib/fidelidade";
+import { CartaoFidelidade } from "@/components/cartao-fidelidade";
+import { FidelidadeAcoes } from "@/components/fidelidade-acoes";
 
 export default async function ClienteDetalhePage({
   params,
@@ -20,6 +23,16 @@ export default async function ClienteDetalhePage({
     .maybeSingle();
 
   if (!cliente) notFound();
+
+  const { data: fidelidadeRow } = await supabase
+    .from("fidelidade_clientes")
+    .select("cookies_no_cartao")
+    .eq("cliente_id", id)
+    .maybeSingle();
+
+  const fidelidade = calcularFidelidade(
+    Number(fidelidadeRow?.cookies_no_cartao ?? 0)
+  );
 
   const { data: pedidos } = await supabase
     .from("pedidos")
@@ -55,6 +68,16 @@ export default async function ClienteDetalhePage({
             {cliente.endereco}
           </p>
         )}
+      </div>
+
+      <div className="mb-6 max-w-md space-y-2">
+        <CartaoFidelidade nome={cliente.nome} fidelidade={fidelidade} />
+        <FidelidadeAcoes
+          clienteId={cliente.id}
+          nome={cliente.nome}
+          telefone={cliente.telefone}
+          saldo={fidelidade.saldo}
+        />
       </div>
 
       <div className="mb-6 flex items-center justify-between">
