@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Send, Gift } from "lucide-react";
+import { Send, Gift, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { registrarResgate } from "@/lib/actions/fidelidade";
@@ -25,6 +25,7 @@ export function FidelidadeAcoes({
 }) {
   const [isPending, startTransition] = useTransition();
   const [enviando, setEnviando] = useState(false);
+  const [copiada, setCopiada] = useState(false);
   const toast = useToast();
 
   const fidelidade = calcularFidelidade(saldo);
@@ -81,7 +82,11 @@ export function FidelidadeAcoes({
       // canShare com files é o teste que importa: navigator.share existe em
       // navegadores que não aceitam arquivo, e aí o envio falharia calado
       if (navigator.canShare?.({ files: [arquivo] })) {
-        await navigator.share({ files: [arquivo], text: mensagem });
+        // Só o arquivo. Mandar `text` junto fazia o WhatsApp tratar os dois
+        // como itens separados e enviar o cartão duas vezes; `title` seria
+        // ignorado pela maioria dos apps, e o texto sumiria sem aviso. A
+        // mensagem fica na tela pra copiar quando quiser.
+        await navigator.share({ files: [arquivo] });
         setEnviando(false);
         return;
       }
@@ -105,6 +110,17 @@ export function FidelidadeAcoes({
     }
   }
 
+  async function copiarMensagem() {
+    try {
+      await navigator.clipboard.writeText(mensagem);
+      setCopiada(true);
+      // volta ao normal sozinho: um "copiado!" permanente vira ruído
+      setTimeout(() => setCopiada(false), 2000);
+    } catch {
+      toast("Não foi possível copiar.");
+    }
+  }
+
   function resgatar() {
     startTransition(async () => {
       try {
@@ -121,23 +137,50 @@ export function FidelidadeAcoes({
   }
 
   return (
-    <div className="flex gap-2">
-      <Button
-        variant="secondary"
-        onClick={enviarCartao}
-        loading={enviando}
-        className="flex-1 sm:flex-none"
-      >
-        <Send className="h-4 w-4" strokeWidth={1.75} />
-        Enviar cartão
-      </Button>
-
-      {temCortesia && (
-        <Button onClick={resgatar} loading={isPending} className="flex-1 sm:flex-none">
-          <Gift className="h-4 w-4" strokeWidth={1.75} />
-          Entreguei
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          onClick={enviarCartao}
+          loading={enviando}
+          className="flex-1 sm:flex-none"
+        >
+          <Send className="h-4 w-4" strokeWidth={1.75} />
+          Enviar cartão
         </Button>
-      )}
+
+        {temCortesia && (
+          <Button onClick={resgatar} loading={isPending} className="flex-1 sm:flex-none">
+            <Gift className="h-4 w-4" strokeWidth={1.75} />
+            Entreguei
+          </Button>
+        )}
+      </div>
+
+      {/* sugestão de legenda: o compartilhamento manda só a imagem, então o
+          texto fica aqui à mão pra quem quiser mandar junto */}
+      <button
+        type="button"
+        onClick={copiarMensagem}
+        className="group flex w-full cursor-pointer gap-2 rounded-lg border border-border bg-berinjela-50/50 px-3 py-2 text-left transition-colors duration-150 hover:bg-berinjela-50"
+      >
+        <span className="min-w-0 flex-1 text-xs leading-relaxed text-neutro-600">
+          {mensagem}
+        </span>
+        <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-neutro-500 group-hover:text-berinjela">
+          {copiada ? (
+            <>
+              <Check className="h-3.5 w-3.5" strokeWidth={2} />
+              copiado
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5" strokeWidth={1.75} />
+              copiar
+            </>
+          )}
+        </span>
+      </button>
     </div>
   );
 }
