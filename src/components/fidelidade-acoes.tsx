@@ -1,7 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
-import { MessageCircle, Gift, Download } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Send, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { registrarResgate } from "@/lib/actions/fidelidade";
@@ -24,50 +24,85 @@ export function FidelidadeAcoes({
   saldo: number;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [enviando, setEnviando] = useState(false);
   const toast = useToast();
 
   const fidelidade = calcularFidelidade(saldo);
   const temCortesia = fidelidade.cortesias > 0;
+  const mensagem = mensagemFidelidade(nome, fidelidade);
+
+  /** Rasteriza o cartão. PNG e não SVG porque o WhatsApp trata SVG como
+   *  documento — chegaria como anexo pra baixar, não como foto na conversa. */
+  function gerarPng(): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        // 2x pra não borrar quando o WhatsApp reamostra
+        const canvas = document.createElement("canvas");
+        canvas.width = 1800;
+        canvas.height = 1240;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("sem canvas"));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("sem blob"))),
+          "image/png"
+        );
+      };
+      img.onerror = () => reject(new Error("falha ao carregar svg"));
+      img.src =
+        "data:image/svg+xml;charset=utf-8," +
+        encodeURIComponent(cartaoFidelidadeSvg(nome, fidelidade));
+    });
+  }
 
   /**
-   * Baixa o cartão como PNG.
+   * Manda o cartão pro cliente.
    *
-   * O wa.me só carrega texto na URL — não dá pra anexar imagem por link.
-   * Então o fluxo é: baixa aqui, abre o WhatsApp com a mensagem pronta, e
-   * você anexa o arquivo na conversa.
+   * O wa.me só aceita texto na URL — nenhum link consegue anexar imagem.
+   * Então há dois caminhos, nesta ordem:
    *
-   * Converte pra PNG porque o WhatsApp trata SVG como documento, não como
-   * foto: chegaria como anexo pra baixar em vez de aparecer na conversa.
+   * 1. Compartilhamento nativo (celular): abre a folha do sistema com imagem
+   *    e texto juntos; você escolhe WhatsApp e o contato. É o mais próximo de
+   *    um clique só.
+   * 2. Baixar + abrir a conversa (desktop, ou celular sem suporte): o arquivo
+   *    cai na pasta de downloads e o WhatsApp abre com o texto pronto pra
+   *    você anexar.
    */
-  function baixarCartao() {
-    const svg = cartaoFidelidadeSvg(nome, fidelidade);
-    const img = new Image();
-    const svgUrl =
-      "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  async function enviarCartao() {
+    setEnviando(true);
+    try {
+      const blob = await gerarPng();
+      const primeiroNome = nome.trim().split(/\s+/)[0].toLowerCase();
+      const arquivo = new File([blob], `cartao-${primeiroNome}.png`, {
+        type: "image/png",
+      });
 
-    img.onload = () => {
-      // 2x pra não sair borrado quando o WhatsApp reamostra a imagem
-      const canvas = document.createElement("canvas");
-      canvas.width = 1800;
-      canvas.height = 1160;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // canShare com files é o teste que importa: navigator.share existe em
+      // navegadores que não aceitam arquivo, e aí o envio falharia calado
+      if (navigator.canShare?.({ files: [arquivo] })) {
+        await navigator.share({ files: [arquivo], text: mensagem });
+        setEnviando(false);
+        return;
+      }
 
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `cartao-${nome.trim().split(/\s+/)[0].toLowerCase()}.png`;
-        link.click();
-        URL.revokeObjectURL(url);
-        toast("Cartão baixado — anexe no WhatsApp");
-      }, "image/png");
-    };
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = arquivo.name;
+      link.click();
+      URL.revokeObjectURL(url);
 
-    img.onerror = () => toast("Não foi possível gerar o cartão.");
-    img.src = svgUrl;
+      window.open(linkWhatsApp(telefone, mensagem), "_blank", "noopener");
+      toast("Cartão baixado — anexe na conversa que abriu");
+    } catch (e) {
+      // cancelar a folha de compartilhamento cai aqui; não é erro pra avisar
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        toast("Não foi possível gerar o cartão.");
+      }
+    } finally {
+      setEnviando(false);
+    }
   }
 
   function resgatar() {
@@ -87,28 +122,15 @@ export function FidelidadeAcoes({
 
   return (
     <div className="flex gap-2">
-      {/* abre o WhatsApp com o texto pronto: você lê antes de enviar, em vez
-          de o sistema disparar sozinho pelas suas costas */}
       <Button
         variant="secondary"
-        onClick={baixarCartao}
-        title="Baixa o cartão como imagem pra anexar no WhatsApp"
-      >
-        <Download className="h-4 w-4" strokeWidth={1.75} />
-        Cartão
-      </Button>
-
-      <a
-        href={linkWhatsApp(telefone, mensagemFidelidade(nome, fidelidade))}
-        target="_blank"
-        rel="noopener noreferrer"
+        onClick={enviarCartao}
+        loading={enviando}
         className="flex-1 sm:flex-none"
       >
-        <Button variant="secondary" className="w-full">
-          <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
-          Avisar
-        </Button>
-      </a>
+        <Send className="h-4 w-4" strokeWidth={1.75} />
+        Enviar cartão
+      </Button>
 
       {temCortesia && (
         <Button onClick={resgatar} loading={isPending} className="flex-1 sm:flex-none">
