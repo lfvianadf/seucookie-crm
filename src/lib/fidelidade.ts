@@ -31,21 +31,29 @@ export function calcularFidelidade(saldo: number): Fidelidade {
   };
 }
 
-/** Mensagem pronta pro WhatsApp, revisada por você antes de enviar. */
+/**
+ * Mensagem pronta pro WhatsApp, revisada por você antes de enviar.
+ *
+ * Agradece a compra antes de falar do cartão: a fidelidade é consequência
+ * da compra, não o motivo dela. Puxar o assunto pelo carimbo faria a
+ * mensagem soar como cobrança pra voltar.
+ */
 export function mensagemFidelidade(nome: string, f: Fidelidade) {
   const primeiroNome = nome.trim().split(/\s+/)[0];
 
   if (f.cortesias > 0) {
-    return f.cortesias === 1
-      ? `Oi, ${primeiroNome}! Seu cartão fidelidade fechou — você tem 1 cookie de cortesia pra resgatar no próximo pedido. 🍪`
-      : `Oi, ${primeiroNome}! Você já tem ${f.cortesias} cookies de cortesia pra resgatar. 🍪`;
+    const quantos =
+      f.cortesias === 1
+        ? "1 cookie de cortesia"
+        : `${f.cortesias} cookies de cortesia`;
+    return `Oi, ${primeiroNome}! Obrigado por mais uma compra, ficamos muito felizes de ter você com a gente. 🍪 E olha só: seu cartão fidelidade fechou! Você tem ${quantos} pra pegar no próximo pedido.`;
   }
 
   if (f.faltam === 1) {
-    return `Oi, ${primeiroNome}! Falta só 1 cookie pro seu cartão fidelidade fechar e você ganhar 1 de cortesia. 🍪`;
+    return `Oi, ${primeiroNome}! Obrigado por mais uma compra, ficamos felizes demais com você por aqui. 🍪 Você chegou mais perto: falta só 1 cookie pra fechar seu cartão fidelidade e ganhar 1 de cortesia!`;
   }
 
-  return `Oi, ${primeiroNome}! Você já tem ${f.carimbos} de ${META_FIDELIDADE} cookies no cartão fidelidade. Faltam ${f.faltam} pra ganhar 1 de cortesia. 🍪`;
+  return `Oi, ${primeiroNome}! Obrigado por mais uma compra, ficamos muito felizes de ter você com a gente. 🍪 Você chegou mais perto: já são ${f.carimbos} de ${META_FIDELIDADE} cookies no cartão, faltam ${f.faltam} pra ganhar 1 de cortesia!`;
 }
 
 /** wa.me exige só dígitos, com DDI. Assume Brasil quando não vier. */
