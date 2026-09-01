@@ -24,8 +24,10 @@ export function SeletorMes({ mes }: { mes: string }) {
   // não deixa navegar pro futuro: mês que ainda não começou não tem dado
   const podeAvancar = proximo <= mesAtual();
 
+  const noMesAtual = mes === mesAtual();
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-white p-0.5">
       <IconButton
         aria-label="Mês anterior"
         title="Mês anterior"
@@ -33,9 +35,15 @@ export function SeletorMes({ mes }: { mes: string }) {
       >
         <ChevronLeft className="h-4 w-4" strokeWidth={1.75} />
       </IconButton>
-      <span className="min-w-36 text-center text-sm font-medium capitalize text-berinjela">
+      <button
+        type="button"
+        onClick={() => !noMesAtual && ir(mesAtual())}
+        disabled={noMesAtual}
+        title={noMesAtual ? undefined : "Voltar para o mês atual"}
+        className="min-w-32 cursor-pointer rounded-md px-2 py-1.5 text-center text-sm font-medium capitalize text-berinjela transition-colors duration-150 ease-out enabled:hover:bg-berinjela-50 disabled:cursor-default"
+      >
         {rotuloMes(mes)}
-      </span>
+      </button>
       <IconButton
         aria-label="Próximo mês"
         title="Próximo mês"

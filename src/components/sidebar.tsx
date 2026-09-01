@@ -103,38 +103,45 @@ export function Sidebar({
       </div>
 
       {/* rola só a lista de links se a tela for baixa demais — o rodapé
-          com e-mail e sair fica sempre visível */}
-      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-2">
+          com e-mail e sair fica sempre visível. Grupos separados por
+          espaço e um traço fino, sem rótulo — os ícones já bastam pra
+          reconhecer cada área depois de um dia de uso. */}
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-2">
         {SECOES.map((secao, i) => (
-          <div key={secao.titulo ?? `secao-${i}`} className="space-y-0.5">
-            {secao.titulo && (
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                {secao.titulo}
-              </p>
-            )}
-            {secao.links.map((link) => {
-              const active = link.href === ativo;
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  prefetch
-                  onClick={onNavigate}
-                  className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out ${
-                    active
-                      ? "bg-white/10 text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {active && (
-                    <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-rosa" />
-                  )}
-                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                  {link.label}
-                </Link>
-              );
-            })}
+          <div key={secao.titulo ?? `secao-${i}`}>
+            {i > 0 && <div className="mx-3 mb-1 mt-2 h-px bg-white/[0.08]" />}
+            <div className="space-y-0.5">
+              {secao.links.map((link) => {
+                const active = link.href === ativo;
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    prefetch
+                    onClick={onNavigate}
+                    className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out ${
+                      active
+                        ? "bg-white/[0.08] text-white"
+                        : "text-white/55 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <span
+                      className={`absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-rosa transition-opacity duration-150 ${
+                        active ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    <Icon
+                      className={`h-4 w-4 shrink-0 transition-transform duration-150 ${
+                        active ? "" : "group-hover:scale-105"
+                      }`}
+                      strokeWidth={1.75}
+                    />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         ))}
       </nav>
