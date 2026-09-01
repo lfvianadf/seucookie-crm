@@ -5,6 +5,7 @@ import { excluirProduto } from "@/lib/actions/produtos";
 import { ProdutoModal } from "@/components/produto-modal";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { DisponibilidadeToggle } from "@/components/disponibilidade-toggle";
+import { PararPropagacao } from "@/components/parar-propagacao";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -166,12 +167,12 @@ export default async function ProdutosPage() {
                             {produto.disponivel ? "Disponível" : "Indisponível"}
                           </Badge>
                         ) : (
-                          <div onClick={(e) => e.stopPropagation()}>
+                          <PararPropagacao>
                             <DisponibilidadeToggle
                               id={produto.id}
                               disponivel={produto.disponivel}
                             />
-                          </div>
+                          </PararPropagacao>
                         )}
                       </div>
                       {margem !== null && (
@@ -184,15 +185,12 @@ export default async function ProdutosPage() {
                           {margemPercent !== null && ` (${margemPercent.toFixed(0)}%)`}
                         </p>
                       )}
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="-mx-1 flex items-center justify-end gap-0.5 border-t border-border pt-2"
-                      >
+                      <PararPropagacao className="-mx-1 flex items-center justify-end gap-0.5 border-t border-border pt-2">
                         <ConfirmDeleteButton
                           itemName={produto.nome}
                           onConfirm={excluirProduto.bind(null, produto.id)}
                         />
-                      </div>
+                      </PararPropagacao>
                     </div>
                   </div>
                 }
