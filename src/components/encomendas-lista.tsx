@@ -6,6 +6,7 @@ import { atualizarStatusPedido, excluirPedido } from "@/lib/actions/pedidos";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { AcertoModal } from "@/components/acerto-modal";
+import { EncomendaDetalheModal } from "@/components/encomenda-detalhe-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -30,6 +31,21 @@ type Item = {
   produtos: { nome: string } | null;
 };
 
+type AcertoBruto = {
+  id: string;
+  valor_recebido: number;
+  data: string;
+  observacoes: string | null;
+  encomenda_acerto_itens: {
+    produto_id: string;
+    qtd_entregue: number;
+    qtd_sobra: number;
+    destino_sobra: "estoque" | "perda";
+    preco_unitario: number;
+    produtos: { nome: string } | null;
+  }[];
+};
+
 type Encomenda = {
   id: string;
   status: PedidoStatus;
@@ -39,11 +55,18 @@ type Encomenda = {
   data_entrega_prevista: string | null;
   clientes: { nome: string; telefone: string; endereco: string | null } | null;
   pedido_itens: Item[];
-  /** null quando não há acerto — relação 1:1 (índice único em pedido_id) */
   // pode vir objeto, array vazio/cheio ou null a depender do schema cache
-  // do PostgREST — normalizado por temAcertoRegistrado, nunca lido cru
-  encomenda_acertos: { id: string } | { id: string }[] | null;
+  // do PostgREST — normalizado por temAcertoRegistrado/primeiroAcerto,
+  // nunca lido cru
+  encomenda_acertos: AcertoBruto | AcertoBruto[] | null;
 };
+
+/** Mesma normalização de temAcertoRegistrado, mas devolvendo o objeto. */
+function primeiroAcerto(valor: Encomenda["encomenda_acertos"]) {
+  if (!valor) return null;
+  if (Array.isArray(valor)) return valor[0] ?? null;
+  return valor;
+}
 
 function formatarData(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", {
@@ -67,8 +90,11 @@ export function EncomendasLista({
     setEncomendas(encomendasIniciais);
   }
 
+  const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const toast = useToast();
+
+  const selecionada = encomendas.find((e) => e.id === selecionadaId) ?? null;
 
   function moverStatus(id: string, status: PedidoStatus) {
     setEncomendas((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
@@ -113,11 +139,57 @@ export function EncomendasLista({
     (e) => e.situacao !== "entregue_pendente" && e.situacao !== "agendada" && e.situacao !== "atrasada"
   );
 
+  const acertoSelecionado = selecionada ? primeiroAcerto(selecionada.encomenda_acertos) : null;
+
   return (
     <div className="space-y-6">
-      <Secao titulo="Precisa de ação" encomendas={pendentes} moverStatus={moverStatus} remover={remover} />
-      <Secao titulo="Agendadas" encomendas={agendadas} moverStatus={moverStatus} remover={remover} />
-      <Secao titulo="Outras" encomendas={outras} moverStatus={moverStatus} remover={remover} />
+      <Secao
+        titulo="Precisa de ação"
+        encomendas={pendentes}
+        moverStatus={moverStatus}
+        remover={remover}
+        selecionar={setSelecionadaId}
+      />
+      <Secao
+        titulo="Agendadas"
+        encomendas={agendadas}
+        moverStatus={moverStatus}
+        remover={remover}
+        selecionar={setSelecionadaId}
+      />
+      <Secao
+        titulo="Outras"
+        encomendas={outras}
+        moverStatus={moverStatus}
+        remover={remover}
+        selecionar={setSelecionadaId}
+      />
+
+      <EncomendaDetalheModal
+        encomenda={
+          selecionada
+            ? {
+                id: selecionada.id,
+                status: selecionada.status,
+                valor_total: selecionada.valor_total,
+                observacoes: selecionada.observacoes,
+                data_pedido: selecionada.data_pedido,
+                data_entrega_prevista: selecionada.data_entrega_prevista,
+                clientes: selecionada.clientes,
+                pedido_itens: selecionada.pedido_itens,
+                acerto: acertoSelecionado
+                  ? {
+                      valor_recebido: acertoSelecionado.valor_recebido,
+                      data: acertoSelecionado.data,
+                      observacoes: acertoSelecionado.observacoes,
+                      encomenda_acerto_itens: acertoSelecionado.encomenda_acerto_itens,
+                    }
+                  : null,
+              }
+            : null
+        }
+        onClose={() => setSelecionadaId(null)}
+      />
     </div>
   );
 }
@@ -131,11 +203,13 @@ function Secao({
   encomendas,
   moverStatus,
   remover,
+  selecionar,
 }: {
   titulo: string;
   encomendas: EncomendaComSituacao[];
   moverStatus: (id: string, status: PedidoStatus) => void;
   remover: (id: string) => Promise<void>;
+  selecionar: (id: string) => void;
 }) {
   if (encomendas.length === 0) return null;
 
@@ -153,7 +227,11 @@ function Secao({
               .join(", ");
 
             return (
-              <li key={encomenda.id} className="flex items-center gap-3 px-4 py-3">
+              <li
+                key={encomenda.id}
+                onClick={() => selecionar(encomenda.id)}
+                className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-berinjela-50/60"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center gap-2">
                     <p className="truncate text-sm font-medium text-berinjela">
@@ -188,6 +266,7 @@ function Secao({
 
                 <select
                   value={encomenda.status}
+                  onClick={(e) => e.stopPropagation()}
                   onChange={(e) => moverStatus(encomenda.id, e.target.value as PedidoStatus)}
                   className={`shrink-0 cursor-pointer rounded-md border-0 px-2 py-1 text-xs font-medium outline-none transition-colors duration-150 ${STATUS_SELECT_CLASSES[STATUS_TONE[encomenda.status]]}`}
                 >
@@ -199,23 +278,27 @@ function Secao({
                 </select>
 
                 {encomenda.situacao === "entregue_pendente" && (
-                  <AcertoModal
-                    pedidoId={encomenda.id}
-                    clienteNome={encomenda.clientes?.nome ?? "cliente"}
-                    itens={encomenda.pedido_itens}
-                    trigger={
-                      <Button size="sm" className="shrink-0">
-                        <Receipt className="h-3.5 w-3.5" strokeWidth={1.75} />
-                        Acerto
-                      </Button>
-                    }
-                  />
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <AcertoModal
+                      pedidoId={encomenda.id}
+                      clienteNome={encomenda.clientes?.nome ?? "cliente"}
+                      itens={encomenda.pedido_itens}
+                      trigger={
+                        <Button size="sm">
+                          <Receipt className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          Acerto
+                        </Button>
+                      }
+                    />
+                  </div>
                 )}
 
-                <ConfirmDeleteButton
-                  itemName={`a encomenda de ${encomenda.clientes?.nome ?? "cliente"}`}
-                  onConfirm={() => remover(encomenda.id)}
-                />
+                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                  <ConfirmDeleteButton
+                    itemName={`a encomenda de ${encomenda.clientes?.nome ?? "cliente"}`}
+                    onConfirm={() => remover(encomenda.id)}
+                  />
+                </div>
               </li>
             );
           })}

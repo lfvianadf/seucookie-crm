@@ -10,7 +10,7 @@ export default async function EncomendasPage() {
       supabase
         .from("pedidos")
         .select(
-          "id, status, valor_total, observacoes, data_pedido, data_entrega_prevista, clientes(nome, telefone, endereco), pedido_itens(id, produto_id, quantidade, preco_unitario, produtos(nome, tipo_produto)), encomenda_acertos(id)"
+          "id, status, valor_total, observacoes, data_pedido, data_entrega_prevista, clientes(nome, telefone, endereco), pedido_itens(id, produto_id, quantidade, preco_unitario, produtos(nome, tipo_produto)), encomenda_acertos(id, valor_recebido, data, observacoes, encomenda_acerto_itens(produto_id, qtd_entregue, qtd_sobra, destino_sobra, preco_unitario, produtos(nome)))"
         )
         .eq("tipo_venda", "encomenda")
         .order("data_pedido", { ascending: false }),
