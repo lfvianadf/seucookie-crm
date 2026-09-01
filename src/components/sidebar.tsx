@@ -20,19 +20,39 @@ import {
 import { logout } from "@/lib/actions/auth";
 import { LogoutButton } from "@/components/logout-button";
 
-const LINKS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/produtos", label: "Cardápio", icon: Cookie },
-  { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
-  { href: "/encomendas", label: "Encomendas", icon: PackageCheck },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/fidelidade", label: "Fidelidade", icon: Stamp },
-  { href: "/insumos", label: "Estoque", icon: Package },
-  { href: "/insumos/receitas", label: "Receitas", icon: BookOpen },
-  { href: "/insumos/producao", label: "Produções", icon: Factory },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
-  { href: "/okrs", label: "Metas", icon: Target },
+const SECOES = [
+  {
+    titulo: null,
+    links: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    titulo: "Vendas",
+    links: [
+      { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
+      { href: "/encomendas", label: "Encomendas", icon: PackageCheck },
+      { href: "/clientes", label: "Clientes", icon: Users },
+      { href: "/fidelidade", label: "Fidelidade", icon: Stamp },
+    ],
+  },
+  {
+    titulo: "Estoque",
+    links: [
+      { href: "/produtos", label: "Cardápio", icon: Cookie },
+      { href: "/insumos", label: "Insumos", icon: Package },
+      { href: "/insumos/receitas", label: "Receitas", icon: BookOpen },
+      { href: "/insumos/producao", label: "Produções", icon: Factory },
+    ],
+  },
+  {
+    titulo: "Gestão",
+    links: [
+      { href: "/financeiro", label: "Financeiro", icon: Wallet },
+      { href: "/okrs", label: "Metas", icon: Target },
+    ],
+  },
 ];
+
+const LINKS = SECOES.flatMap((s) => s.links);
 
 // o link ativo é o de href mais longo que casa com a rota atual — sem isso
 // /insumos ficaria aceso junto de /insumos/receitas.
@@ -84,27 +104,39 @@ export function Sidebar({
 
       {/* rola só a lista de links se a tela for baixa demais — o rodapé
           com e-mail e sair fica sempre visível */}
-      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2">
-        {LINKS.map((link) => {
-          const active = link.href === ativo;
-          const Icon = link.icon;
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              prefetch
-              onClick={onNavigate}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out ${
-                active
-                  ? "bg-white/10 text-white"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              {link.label}
-            </Link>
-          );
-        })}
+      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-2">
+        {SECOES.map((secao, i) => (
+          <div key={secao.titulo ?? `secao-${i}`} className="space-y-0.5">
+            {secao.titulo && (
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                {secao.titulo}
+              </p>
+            )}
+            {secao.links.map((link) => {
+              const active = link.href === ativo;
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  prefetch
+                  onClick={onNavigate}
+                  className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out ${
+                    active
+                      ? "bg-white/10 text-white"
+                      : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-rosa" />
+                  )}
+                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div className="shrink-0 border-t border-white/10 px-4 py-4">
