@@ -41,6 +41,23 @@ export function produtoValeNoTipoVenda(
   return canal === tipoVenda || canal === "ambos";
 }
 
+/**
+ * O embed `encomenda_acertos(id)` do PostgREST é 1:1 (índice único em
+ * pedido_id), então o schema cache normalmente tipa como objeto único.
+ * Mas quando o cache ainda não reconheceu a constraint de unicidade — ou
+ * simplesmente não há relação — ele volta como array vazio `[]`, não
+ * `null`. `!![]` é `true` em JS, então checar `!!campo` direto faz um
+ * pedido SEM acerto passar como "tem acerto". Esta função aceita os três
+ * formatos possíveis e nunca erra pro lado otimista.
+ */
+export function temAcertoRegistrado(
+  valor: { id: string } | { id: string }[] | null | undefined
+): boolean {
+  if (!valor) return false;
+  if (Array.isArray(valor)) return valor.length > 0;
+  return true;
+}
+
 export type SituacaoEncomenda =
   | "agendada"
   | "atrasada"

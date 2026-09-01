@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -11,65 +12,88 @@ import { createClient } from "@/lib/supabase/server";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { SeletorMes } from "@/components/seletor-mes";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/pedido-status";
 import { ESTOQUE_BAIXO } from "@/lib/estoque";
+import { temAcertoRegistrado } from "@/lib/encomenda";
+import { mesAtual, intervaloDoMes } from "@/lib/competencia";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string }>;
+}) {
+  const { mes: mesParam } = await searchParams;
+  const mes = mesParam ?? mesAtual();
+  const { inicio, fim } = intervaloDoMes(mes);
+
   const supabase = await createClient();
 
-  const [{ data: pedidos }, { data: producoes }, { data: produtos }] =
-    await Promise.all([
-      supabase
-        .from("pedidos")
-        .select(
-          "id, status, tipo_venda, valor_total, data_pedido, clientes(nome), encomenda_acertos(id)"
-        )
-        .order("data_pedido", { ascending: false }),
-      supabase
-        .from("producoes")
-        .select("id, quantidade_produzida, data, receitas(nome), produtos(nome)")
-        .order("data", { ascending: false }),
-      supabase
-        .from("produtos")
-        .select("id, nome, qtd_estoque, tipo_produto")
-        .eq("tipo_produto", "cookie")
-        .order("qtd_estoque", { ascending: true }),
-    ]);
+  // pendências (recebidos, em produção, encomendas a acertar, estoque
+  // baixo) são sempre do AGORA, não do mês navegado — são coisas que
+  // exigem ação hoje, independente de qual mês você está olhando pra trás
+  const [
+    { data: pedidosDoMes },
+    { data: pendencias },
+    { data: producoesDoMes },
+    { data: produtos },
+  ] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("id, status, tipo_venda, valor_total, data_pedido, clientes(nome)")
+      .eq("tipo_venda", "varejo")
+      .neq("status", "cancelado")
+      .gte("data_pedido", inicio.toISOString())
+      .lt("data_pedido", fim.toISOString())
+      .order("data_pedido", { ascending: false }),
+    supabase
+      .from("pedidos")
+      .select("id, status, tipo_venda, encomenda_acertos(id)")
+      .neq("status", "cancelado"),
+    supabase
+      .from("producoes")
+      .select("id, quantidade_produzida, data, receitas(nome), produtos(nome)")
+      .gte("data", inicio.toISOString())
+      .lt("data", fim.toISOString())
+      .order("data", { ascending: false }),
+    supabase
+      .from("produtos")
+      .select("id, nome, qtd_estoque, tipo_produto")
+      .eq("tipo_produto", "cookie")
+      .order("qtd_estoque", { ascending: true }),
+  ]);
 
-  const inicioMes = new Date();
-  inicioMes.setDate(1);
-  inicioMes.setHours(0, 0, 0, 0);
+  const varejoDoMes = pedidosDoMes ?? [];
+  const producoesLista = producoesDoMes ?? [];
+  const pendenciasLista = pendencias ?? [];
 
-  const pedidosLista = pedidos ?? [];
-  const producoesLista = producoes ?? [];
-
-  // dashboard mostra varejo — encomenda tem tela própria (/encomendas) e
-  // não vira faturamento na entrega, só no acerto
-  const varejoLista = pedidosLista.filter((p) => p.tipo_venda === "varejo");
-  const encomendasLista = pedidosLista.filter((p) => p.tipo_venda === "encomenda");
-
-  const pedidosNovos = varejoLista.filter((p) => p.status === "novo").length;
-  const pedidosEmProducao = varejoLista.filter(
-    (p) => p.status === "em_producao"
+  const pedidosNovos = pendenciasLista.filter(
+    (p) => p.tipo_venda === "varejo" && p.status === "novo"
+  ).length;
+  const pedidosEmProducao = pendenciasLista.filter(
+    (p) => p.tipo_venda === "varejo" && p.status === "em_producao"
   ).length;
 
-  const faturamentoMes = varejoLista
-    .filter(
-      (p) => new Date(p.data_pedido) >= inicioMes && p.status !== "cancelado"
-    )
-    .reduce((soma, p) => soma + Number(p.valor_total), 0);
+  const faturamentoMes = varejoDoMes.reduce(
+    (soma, p) => soma + Number(p.valor_total),
+    0
+  );
 
-  const cookiesMes = producoesLista
-    .filter((p) => new Date(p.data) >= inicioMes)
-    .reduce((soma, p) => soma + p.quantidade_produzida, 0);
+  const cookiesMes = producoesLista.reduce(
+    (soma, p) => soma + p.quantidade_produzida,
+    0
+  );
 
-  // entregue e ainda sem acerto — encomenda_acertos vem null quando não há
-  // acerto, por causa do índice único em pedido_id (relação 1:1)
-  const encomendasPendentes = encomendasLista.filter(
-    (p) => p.status === "entregue" && !p.encomenda_acertos
+  // entregue e ainda sem acerto — temAcertoRegistrado trata o embed vindo
+  // como objeto, array ou null (ver comentário na função)
+  const encomendasPendentes = pendenciasLista.filter(
+    (p) =>
+      p.tipo_venda === "encomenda" &&
+      p.status === "entregue" &&
+      !temAcertoRegistrado(p.encomenda_acertos)
   ).length;
 
-  const pedidosRecentes = varejoLista.slice(0, 6);
+  const pedidosRecentes = varejoDoMes.slice(0, 6);
   const producaoRecente = producoesLista.slice(0, 6);
 
   // o que exige ação hoje: cookie sem estoque nenhum ou perto de acabar.
@@ -84,12 +108,19 @@ export default async function DashboardPage() {
     <div>
       <PageHeader title="Dashboard" description="Visão geral de pedidos e produção." />
 
+      <div className="mb-4">
+        {/* SeletorMes usa useSearchParams, que exige um limite de Suspense */}
+        <Suspense fallback={<div className="h-8" />}>
+          <SeletorMes mes={mes} />
+        </Suspense>
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatTile
           label="Pedidos recebidos"
           value={String(pedidosNovos)}
           icon={ClipboardList}
-          hint="aguardando produção"
+          hint="aguardando produção agora"
           href="/pedidos"
           tone={pedidosNovos > 0 ? "atencao" : "neutral"}
         />
@@ -97,20 +128,20 @@ export default async function DashboardPage() {
           label="Em produção"
           value={String(pedidosEmProducao)}
           icon={Factory}
-          hint="pedidos na fila"
+          hint="pedidos na fila agora"
           href="/pedidos"
         />
         <StatTile
-          label="Faturamento do mês"
+          label="Faturamento"
           value={`R$ ${faturamentoMes.toFixed(2)}`}
           icon={Wallet}
-          hint="exclui cancelados"
+          hint="varejo, exclui cancelados"
         />
         <StatTile
           label="Cookies produzidos"
           value={cookiesMes.toLocaleString("pt-BR")}
           icon={Cookie}
-          hint="neste mês"
+          hint="no mês"
           href="/insumos/producao"
         />
       </div>

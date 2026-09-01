@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { intervaloDoMes, parcelaDoMes } from "@/lib/competencia";
 import { calcularCustoReceita } from "@/lib/receita-custo";
+import { temAcertoRegistrado } from "@/lib/encomenda";
 import type { TipoCusto } from "@/lib/types/database";
 
 export type ResumoCanal = {
@@ -213,11 +214,10 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
       ? ((encomenda.vendas - encomenda.custoDosVendidos) / encomenda.vendas) * 100
       : 0;
 
-  // a receber: entregue e sem acerto — encomenda_acertos vem null quando
-  // não há acerto (é relação 1:1 por causa do índice único em pedido_id,
-  // então o PostgREST tipa como objeto e não array)
+  // a receber: entregue e sem acerto — temAcertoRegistrado trata o embed
+  // vindo como objeto, array ou null (ver comentário na função)
   const pendentesSemAcerto = (pendentes ?? []).filter(
-    (p) => !p.encomenda_acertos
+    (p) => !temAcertoRegistrado(p.encomenda_acertos)
   );
   const aReceber = {
     valor: pendentesSemAcerto.reduce((s, p) => s + Number(p.valor_total), 0),

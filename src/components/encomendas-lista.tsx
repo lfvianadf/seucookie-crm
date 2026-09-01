@@ -17,6 +17,7 @@ import {
 } from "@/lib/pedido-status";
 import {
   situacaoEncomenda,
+  temAcertoRegistrado,
   SITUACAO_ENCOMENDA_LABEL,
   SITUACAO_ENCOMENDA_TONE,
 } from "@/lib/encomenda";
@@ -39,7 +40,9 @@ type Encomenda = {
   clientes: { nome: string; telefone: string; endereco: string | null } | null;
   pedido_itens: Item[];
   /** null quando não há acerto — relação 1:1 (índice único em pedido_id) */
-  encomenda_acertos: { id: string } | null;
+  // pode vir objeto, array vazio/cheio ou null a depender do schema cache
+  // do PostgREST — normalizado por temAcertoRegistrado, nunca lido cru
+  encomenda_acertos: { id: string } | { id: string }[] | null;
 };
 
 function formatarData(iso: string) {
@@ -91,7 +94,7 @@ export function EncomendasLista({
     situacao: situacaoEncomenda({
       status: e.status,
       data_entrega_prevista: e.data_entrega_prevista,
-      temAcerto: !!e.encomenda_acertos,
+      temAcerto: temAcertoRegistrado(e.encomenda_acertos),
     }),
   }));
 
