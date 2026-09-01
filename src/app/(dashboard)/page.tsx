@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ClipboardList, Factory, Wallet, Cookie, AlertTriangle } from "lucide-react";
+import {
+  ClipboardList,
+  Factory,
+  Wallet,
+  Cookie,
+  AlertTriangle,
+  PackageCheck,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +21,7 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase
         .from("pedidos")
-        .select("id, status, valor_total, data_pedido, clientes(nome)")
+        .select("id, status, tipo_venda, valor_total, data_pedido, clientes(nome)")
         .order("data_pedido", { ascending: false }),
       supabase
         .from("producoes")
@@ -34,12 +41,17 @@ export default async function DashboardPage() {
   const pedidosLista = pedidos ?? [];
   const producoesLista = producoes ?? [];
 
-  const pedidosNovos = pedidosLista.filter((p) => p.status === "novo").length;
-  const pedidosEmProducao = pedidosLista.filter(
+  // dashboard mostra varejo — encomenda tem tela própria (/encomendas) e
+  // não vira faturamento na entrega, só no acerto
+  const varejoLista = pedidosLista.filter((p) => p.tipo_venda === "varejo");
+  const encomendasLista = pedidosLista.filter((p) => p.tipo_venda === "encomenda");
+
+  const pedidosNovos = varejoLista.filter((p) => p.status === "novo").length;
+  const pedidosEmProducao = varejoLista.filter(
     (p) => p.status === "em_producao"
   ).length;
 
-  const faturamentoMes = pedidosLista
+  const faturamentoMes = varejoLista
     .filter(
       (p) => new Date(p.data_pedido) >= inicioMes && p.status !== "cancelado"
     )
@@ -49,7 +61,14 @@ export default async function DashboardPage() {
     .filter((p) => new Date(p.data) >= inicioMes)
     .reduce((soma, p) => soma + p.quantidade_produzida, 0);
 
-  const pedidosRecentes = pedidosLista.slice(0, 6);
+  // sem acerto ainda (fase 3 do plano de encomendas): por ora, toda
+  // encomenda entregue está "pendente" — vira contável quando o ciclo de
+  // acerto existir
+  const encomendasPendentes = encomendasLista.filter(
+    (p) => p.status === "entregue"
+  ).length;
+
+  const pedidosRecentes = varejoLista.slice(0, 6);
   const producaoRecente = producoesLista.slice(0, 6);
 
   // o que exige ação hoje: cookie sem estoque nenhum ou perto de acabar.
@@ -94,6 +113,19 @@ export default async function DashboardPage() {
           href="/insumos/producao"
         />
       </div>
+
+      {encomendasPendentes > 0 && (
+        <div className="mb-4">
+          <StatTile
+            label="Encomendas a acertar"
+            value={String(encomendasPendentes)}
+            icon={PackageCheck}
+            hint="entregues, aguardando acerto"
+            href="/encomendas"
+            tone="atencao"
+          />
+        </div>
+      )}
 
       {precisaAssar.length > 0 && (
         <div className="mb-4 rounded-xl border border-border bg-white">

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { TipoProduto } from "@/lib/types/database";
+import type { TipoProduto, ProdutoCanal } from "@/lib/types/database";
 
 const FOTOS_BUCKET = "seucookie";
 
@@ -38,11 +38,19 @@ async function sincronizarBoxItens(
   supabase: Awaited<ReturnType<typeof createClient>>,
   produtoId: string,
   tipoProduto: TipoProduto,
+  canal: ProdutoCanal,
   formData: FormData
 ) {
   await supabase.from("produto_box_itens").delete().eq("box_id", produtoId);
 
   if (tipoProduto !== "box") return;
+
+  // box de encomenda nunca reabre no site, mesmo com estoque > 0 — mesma
+  // regra de disponivelFinal acima, repetida aqui porque este helper roda
+  // depois e sobrescreveria disponivel de volta pra true
+  if (canal === "encomenda") {
+    await supabase.from("produtos").update({ disponivel: false }).eq("id", produtoId);
+  }
 
   const cookieIds = formData.getAll("box_cookies").map(String).filter(Boolean);
   if (cookieIds.length === 0) {
@@ -53,6 +61,8 @@ async function sincronizarBoxItens(
   await supabase.from("produto_box_itens").insert(
     cookieIds.map((cookieId) => ({ box_id: produtoId, cookie_id: cookieId }))
   );
+
+  if (canal === "encomenda") return;
 
   const { data: cookies } = await supabase
     .from("produtos")
@@ -87,6 +97,12 @@ export async function criarProduto(formData: FormData) {
 
   const tipoProduto = (String(formData.get("tipo_produto") ?? "cookie") ||
     "cookie") as TipoProduto;
+  const canal = (String(formData.get("canal") ?? "varejo") ||
+    "varejo") as ProdutoCanal;
+  // nunca confiar no checkbox pra esconder preço de atacado: produto de
+  // encomenda é sempre indisponível no site, mesmo que o form mande outra
+  // coisa — a policy de RLS já reforça isso, aqui é defesa em profundidade
+  const disponivelFinal = canal === "encomenda" ? false : disponivel;
 
   if (!nome || Number.isNaN(preco)) return;
 
@@ -99,9 +115,10 @@ export async function criarProduto(formData: FormData) {
       preco,
       capitulo,
       descricao,
-      disponivel,
+      disponivel: disponivelFinal,
       qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
       tipo_produto: tipoProduto,
+      canal,
       qtd_cookies_box:
         tipoProduto === "box" && qtdCookiesBox && qtdCookiesBox > 0
           ? qtdCookiesBox
@@ -119,7 +136,7 @@ export async function criarProduto(formData: FormData) {
 
   if (error) throw error;
 
-  await sincronizarBoxItens(supabase, produto.id, tipoProduto, formData);
+  await sincronizarBoxItens(supabase, produto.id, tipoProduto, canal, formData);
 
   revalidatePath("/produtos");
 }
@@ -144,6 +161,12 @@ export async function atualizarProduto(id: string, formData: FormData) {
 
   const tipoProduto = (String(formData.get("tipo_produto") ?? "cookie") ||
     "cookie") as TipoProduto;
+  const canal = (String(formData.get("canal") ?? "varejo") ||
+    "varejo") as ProdutoCanal;
+  // nunca confiar no checkbox pra esconder preço de atacado: produto de
+  // encomenda é sempre indisponível no site, mesmo que o form mande outra
+  // coisa — a policy de RLS já reforça isso, aqui é defesa em profundidade
+  const disponivelFinal = canal === "encomenda" ? false : disponivel;
 
   if (!nome || Number.isNaN(preco)) return;
 
@@ -156,9 +179,10 @@ export async function atualizarProduto(id: string, formData: FormData) {
       preco,
       capitulo,
       descricao,
-      disponivel,
+      disponivel: disponivelFinal,
       qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
       tipo_produto: tipoProduto,
+      canal,
       qtd_cookies_box:
         tipoProduto === "box" && qtdCookiesBox && qtdCookiesBox > 0
           ? qtdCookiesBox
@@ -175,7 +199,7 @@ export async function atualizarProduto(id: string, formData: FormData) {
 
   if (error) throw error;
 
-  await sincronizarBoxItens(supabase, id, tipoProduto, formData);
+  await sincronizarBoxItens(supabase, id, tipoProduto, canal, formData);
 
   revalidatePath("/produtos");
 }

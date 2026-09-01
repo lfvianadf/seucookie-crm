@@ -12,6 +12,8 @@ export default async function PedidosPage() {
         .select(
           "id, status, origem, valor_total, observacoes, data_pedido, clientes(nome, telefone, endereco), pedido_itens(id, produto_id, quantidade, preco_unitario, produtos(nome, tipo_produto), pedido_item_composicao(quantidade, produtos(nome)))"
         )
+        // encomenda tem tela própria (/encomendas) — este Kanban é só varejo
+        .eq("tipo_venda", "varejo")
         .order("data_pedido", { ascending: false }),
       supabase
         .from("produtos")
@@ -19,6 +21,9 @@ export default async function PedidosPage() {
           "id, nome, preco, capitulo, tipo_produto, qtd_cookies_box, acrescimo_box"
         )
         .eq("disponivel", true)
+        // canal já garante que produto de encomenda não aparece aqui, mesmo
+        // que disponivel esteja errado — não depende só do RLS do site
+        .in("canal", ["varejo", "ambos"])
         .order("capitulo", { ascending: true })
         .order("nome", { ascending: true }),
       supabase.from("produto_box_itens").select("box_id, cookie_id"),

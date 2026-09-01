@@ -130,6 +130,75 @@ export default async function FinanceiroPage({
         />
       </div>
 
+      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-border bg-white p-4">
+          <p className="mb-3 text-xs font-medium text-neutro-500">Varejo</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Vendas
+              </p>
+              <p className="text-lg font-semibold text-berinjela">
+                {reais(f.varejo.vendas)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Custo
+              </p>
+              <p className="text-lg font-semibold text-berinjela">
+                {reais(f.varejo.custoDosVendidos)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Margem
+              </p>
+              <p className="text-lg font-semibold text-salvia-text">
+                {f.varejo.margemBruta.toFixed(0)}%
+              </p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutro-500">
+            {f.varejo.pedidos} pedido{f.varejo.pedidos === 1 ? "" : "s"}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-white p-4">
+          <p className="mb-3 text-xs font-medium text-neutro-500">Encomenda</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Vendas
+              </p>
+              <p className="text-lg font-semibold text-berinjela">
+                {reais(f.encomenda.vendas)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Custo
+              </p>
+              <p className="text-lg font-semibold text-berinjela">
+                {reais(f.encomenda.custoDosVendidos)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Margem
+              </p>
+              <p className="text-lg font-semibold text-salvia-text">
+                {f.encomenda.margemBruta.toFixed(0)}%
+              </p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutro-500">
+            {f.encomenda.pedidos} encomenda{f.encomenda.pedidos === 1 ? "" : "s"} —{" "}
+            <em>conta na entrega por ora; o ciclo de acerto ainda não existe</em>
+          </p>
+        </div>
+      </div>
+
       <div className="mb-6 rounded-xl border border-border bg-white p-4">
         <div className="min-w-0">
           <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-neutro-500">

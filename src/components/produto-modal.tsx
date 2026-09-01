@@ -8,7 +8,8 @@ import { Label, Input, Select, Textarea, FieldGroup } from "@/components/ui/fiel
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { criarProduto, atualizarProduto } from "@/lib/actions/produtos";
-import type { TipoProduto } from "@/lib/types/database";
+import { CANAL_ORDEM, CANAL_LABEL, CANAL_HINT } from "@/lib/encomenda";
+import type { TipoProduto, ProdutoCanal } from "@/lib/types/database";
 
 type Receita = { id: string; nome: string };
 type CookieOpcao = { id: string; nome: string };
@@ -25,6 +26,7 @@ type ProdutoExistente = {
   tipo_produto: TipoProduto;
   qtd_cookies_box: number | null;
   acrescimo_box: number;
+  canal: ProdutoCanal;
   foto_url: string | null;
   receita_id: string | null;
 };
@@ -46,6 +48,9 @@ export function ProdutoModal({
   const [isPending, startTransition] = useTransition();
   const [tipoProduto, setTipoProduto] = useState<TipoProduto>(
     produtoExistente?.tipo_produto ?? "cookie"
+  );
+  const [canal, setCanal] = useState<ProdutoCanal>(
+    produtoExistente?.canal ?? "varejo"
   );
   const [cookiesSelecionados, setCookiesSelecionados] = useState<Set<string>>(
     new Set(boxCookieIdsExistentes ?? [])
@@ -137,6 +142,23 @@ export function ProdutoModal({
                 <option value="cookie">Cookie</option>
                 <option value="box">Box (caixa sortida)</option>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="canal">Canal de venda</Label>
+              <Select
+                id="canal"
+                name="canal"
+                value={canal}
+                onChange={(e) => setCanal(e.target.value as ProdutoCanal)}
+              >
+                {CANAL_ORDEM.map((valor) => (
+                  <option key={valor} value={valor}>
+                    {CANAL_LABEL[valor]}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1 text-xs text-neutro-500">{CANAL_HINT[canal]}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -278,23 +300,25 @@ export function ProdutoModal({
               />
             </div>
 
-            <div>
-              <label className="flex items-center gap-2 text-sm text-berinjela">
-                <input
-                  type="checkbox"
-                  name="disponivel"
-                  defaultChecked={produtoExistente?.disponivel ?? true}
-                  className="h-4 w-4 accent-rosa"
-                  disabled={ehBox}
-                />
-                Disponível no site
-              </label>
-              <p className="mt-1 text-xs text-neutro-500">
-                {ehBox
-                  ? "Pra box, isso é automático: fica disponível enquanto algum dos cookies selecionados tiver estoque."
-                  : "Fica indisponível sozinho quando o estoque chega a 0 (cada pedido desconta a quantidade vendida)."}
-              </p>
-            </div>
+            {canal !== "encomenda" && (
+              <div>
+                <label className="flex items-center gap-2 text-sm text-berinjela">
+                  <input
+                    type="checkbox"
+                    name="disponivel"
+                    defaultChecked={produtoExistente?.disponivel ?? true}
+                    className="h-4 w-4 accent-rosa"
+                    disabled={ehBox}
+                  />
+                  Disponível no site
+                </label>
+                <p className="mt-1 text-xs text-neutro-500">
+                  {ehBox
+                    ? "Pra box, isso é automático: fica disponível enquanto algum dos cookies selecionados tiver estoque."
+                    : "Fica indisponível sozinho quando o estoque chega a 0 (cada pedido desconta a quantidade vendida)."}
+                </p>
+              </div>
+            )}
           </FieldGroup>
 
           <div className="flex justify-end gap-2 border-t border-border pt-5">

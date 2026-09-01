@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { calcularCustoReceita } from "@/lib/receita-custo";
 import { ESTOQUE_BAIXO } from "@/lib/estoque";
+import { agruparPorCanal } from "@/lib/encomenda";
 
 export default async function ProdutosPage() {
   const supabase = await createClient();
@@ -62,8 +63,19 @@ export default async function ProdutosPage() {
       />
 
       {produtosLista.length ? (
+        <div className="space-y-6">
+        {agruparPorCanal(produtosLista).map((grupo) => (
+        <section key={grupo.canal}>
+          {agruparPorCanal(produtosLista).length > 1 && (
+            <div className="mb-2 flex items-baseline gap-2">
+              <h2 className="text-sm font-semibold text-berinjela">
+                {grupo.label}
+              </h2>
+              <span className="text-xs text-neutro-500">{grupo.itens.length}</span>
+            </div>
+          )}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {produtosLista.map((produto) => {
+          {grupo.itens.map((produto) => {
             const ehBox = produto.tipo_produto === "box";
 
             const cookieIdsDaBox = boxItensLista
@@ -188,6 +200,9 @@ export default async function ProdutosPage() {
               </div>
             );
           })}
+        </div>
+        </section>
+        ))}
         </div>
       ) : (
         <EmptyState

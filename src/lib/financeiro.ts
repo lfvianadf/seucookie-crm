@@ -3,11 +3,27 @@ import { intervaloDoMes, parcelaDoMes } from "@/lib/competencia";
 import { calcularCustoReceita } from "@/lib/receita-custo";
 import type { TipoCusto } from "@/lib/types/database";
 
-export type ResumoFinanceiro = {
+export type ResumoCanal = {
   vendas: number;
+  custoDosVendidos: number;
+  margemBruta: number;
+  pedidos: number;
+};
+
+export type ResumoFinanceiro = {
+  /** varejo.vendas + encomenda.vendas — mantido pra não quebrar OKRs */
+  vendas: number;
+  varejo: ResumoCanal;
+  /**
+   * Fase 1: sem ciclo de acerto ainda, então encomenda soma aqui na
+   * entrega, igual varejo — só separada. Na fase 3, quando o acerto
+   * existir, este número passa a vir só do que foi acertado no mês, e
+   * `aReceber` aparece com o que foi entregue mas ainda não.
+   */
+  encomenda: ResumoCanal;
   pedidos: number;
   cookiesProduzidos: number;
-  /** custo de receita dos produtos vendidos no mês */
+  /** custo de receita dos produtos vendidos no mês (varejo + encomenda) */
   custoDosVendidos: number;
   /** dinheiro que saiu comprando insumo no mês (lotes lançados) */
   comprasDeInsumo: number;
@@ -71,7 +87,9 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
   ] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("id, valor_total, status, pedido_itens(produto_id, quantidade)")
+      .select(
+        "id, valor_total, status, tipo_venda, pedido_itens(produto_id, quantidade)"
+      )
       .neq("status", "cancelado")
       .gte("data_pedido", inicio.toISOString())
       .lt("data_pedido", fim.toISOString()),
@@ -100,7 +118,8 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
   ]);
 
   const pedidosLista = pedidos ?? [];
-  const vendas = pedidosLista.reduce((s, p) => s + Number(p.valor_total), 0);
+  const varejoLista = pedidosLista.filter((p) => p.tipo_venda === "varejo");
+  const encomendaLista = pedidosLista.filter((p) => p.tipo_venda === "encomenda");
 
   const cookiesProduzidos = (producoes ?? []).reduce(
     (s, p) => s + p.quantidade_produzida,
@@ -128,14 +147,33 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     custoPorProduto.set(produto.id, custoPorCookie);
   }
 
-  const custoDosVendidos = pedidosLista.reduce((soma, pedido) => {
-    const doPedido = pedido.pedido_itens.reduce(
+  function custoDoPedido(pedido: { pedido_itens: { produto_id: string; quantidade: number }[] }) {
+    return pedido.pedido_itens.reduce(
       (s, item) =>
         s + (custoPorProduto.get(item.produto_id) ?? 0) * item.quantidade,
       0
     );
-    return soma + doPedido;
-  }, 0);
+  }
+
+  function montarResumoCanal(lista: typeof pedidosLista): ResumoCanal {
+    const canalVendas = lista.reduce((s, p) => s + Number(p.valor_total), 0);
+    const canalCusto = lista.reduce((s, p) => s + custoDoPedido(p), 0);
+    return {
+      vendas: canalVendas,
+      custoDosVendidos: canalCusto,
+      margemBruta:
+        canalVendas > 0 ? ((canalVendas - canalCusto) / canalVendas) * 100 : 0,
+      pedidos: lista.length,
+    };
+  }
+
+  const varejo = montarResumoCanal(varejoLista);
+  // fase 1: encomenda soma na entrega, sem ciclo de acerto ainda (ver
+  // comentário no tipo ResumoFinanceiro.encomenda)
+  const encomenda = montarResumoCanal(encomendaLista);
+
+  const vendas = varejo.vendas + encomenda.vendas;
+  const custoDosVendidos = varejo.custoDosVendidos + encomenda.custoDosVendidos;
 
   const custos = (custosMensais ?? [])
     .map((c) => ({ custo: c, parcela: parcelaDoMes(c, mes) }))
@@ -184,6 +222,8 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
 
   return {
     vendas,
+    varejo,
+    encomenda,
     pedidos: pedidosLista.length,
     cookiesProduzidos,
     custoDosVendidos,

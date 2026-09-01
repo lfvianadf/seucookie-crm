@@ -8,6 +8,10 @@ export type PedidoStatus =
 
 export type PedidoOrigem = "site" | "manual";
 
+export type PedidoTipoVenda = "varejo" | "encomenda";
+
+export type ProdutoCanal = "varejo" | "encomenda" | "ambos";
+
 export type UnidadeBase = "g" | "ml" | "un";
 
 export type CategoriaInsumo =
@@ -46,6 +50,7 @@ export interface Database {
           disponivel: boolean;
           qtd_estoque: number;
           tipo_produto: TipoProduto;
+          canal: ProdutoCanal;
           qtd_cookies_box: number | null;
           acrescimo_box: number;
           capitulo: string | null;
@@ -63,6 +68,7 @@ export interface Database {
           disponivel?: boolean;
           qtd_estoque?: number;
           tipo_produto?: TipoProduto;
+          canal?: ProdutoCanal;
           qtd_cookies_box?: number | null;
           acrescimo_box?: number;
           capitulo?: string | null;
@@ -106,6 +112,7 @@ export interface Database {
           cliente_id: string;
           status: PedidoStatus;
           origem: PedidoOrigem;
+          tipo_venda: PedidoTipoVenda;
           valor_total: number;
           observacoes: string | null;
           data_pedido: string;
@@ -118,6 +125,7 @@ export interface Database {
           cliente_id: string;
           status?: PedidoStatus;
           origem?: PedidoOrigem;
+          tipo_venda?: PedidoTipoVenda;
           valor_total: number;
           observacoes?: string | null;
           data_pedido?: string;
