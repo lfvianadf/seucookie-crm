@@ -105,8 +105,20 @@ export async function atualizarCliente(id: string, formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/clientes");
-  revalidatePath(`/clientes/${id}`);
   revalidatePath("/fidelidade");
+}
+
+export async function buscarPedidosDoCliente(clienteId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("pedidos")
+    .select(
+      "id, status, valor_total, data_pedido, pedido_itens(quantidade, produtos(nome))"
+    )
+    .eq("cliente_id", clienteId)
+    .order("data_pedido", { ascending: false });
+
+  return data ?? [];
 }
 
 export async function excluirCliente(id: string) {

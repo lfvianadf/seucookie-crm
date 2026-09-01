@@ -36,10 +36,9 @@ export async function registrarResgate(clienteId: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/fidelidade");
-  revalidatePath(`/clientes/${clienteId}`);
 }
 
-export async function desfazerResgate(resgateId: string, clienteId: string) {
+export async function desfazerResgate(resgateId: string) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("fidelidade_resgates")
@@ -49,5 +48,4 @@ export async function desfazerResgate(resgateId: string, clienteId: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/fidelidade");
-  revalidatePath(`/clientes/${clienteId}`);
 }

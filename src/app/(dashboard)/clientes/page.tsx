@@ -1,14 +1,9 @@
-import Link from "next/link";
-import { Search, Users, Pencil } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ClienteModal } from "@/components/cliente-modal";
-import { Badge } from "@/components/ui/badge";
+import { ClientesLista } from "@/components/clientes-lista";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { IconButton } from "@/components/ui/icon-button";
-import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
-import { excluirCliente } from "@/lib/actions/clientes";
-import { formatarTelefone } from "@/lib/telefone";
 
 export default async function ClientesPage({
   searchParams,
@@ -39,13 +34,10 @@ export default async function ClientesPage({
 
   // contagem de pedidos por cliente — feita aqui em JS porque o PostgREST
   // não faz group by; a tabela de pedidos é pequena o bastante pra isso.
-  const totalPorCliente = new Map<string, number>();
+  const totalPorCliente: Record<string, number> = {};
   for (const pedido of pedidosDosClientes ?? []) {
     if (!pedido.cliente_id) continue;
-    totalPorCliente.set(
-      pedido.cliente_id,
-      (totalPorCliente.get(pedido.cliente_id) ?? 0) + 1
-    );
+    totalPorCliente[pedido.cliente_id] = (totalPorCliente[pedido.cliente_id] ?? 0) + 1;
   }
 
   return (
@@ -72,126 +64,7 @@ export default async function ClientesPage({
       </form>
 
       {clientes?.length ? (
-        <>
-        <div className="space-y-2 md:hidden">
-          {clientes.map((cliente) => {
-            const total = totalPorCliente.get(cliente.id) ?? 0;
-            return (
-              <div
-                key={cliente.id}
-                className="rounded-xl border border-border bg-white p-3"
-              >
-                <div className="mb-1 flex items-start justify-between gap-2">
-                  <Link
-                    href={`/clientes/${cliente.id}`}
-                    className="min-w-0 flex-1 truncate text-sm font-medium text-berinjela"
-                  >
-                    {cliente.nome}
-                  </Link>
-                  {total > 1 && <Badge tone="salvia">{total} pedidos</Badge>}
-                </div>
-                <p className="text-xs text-neutro-500">
-                  {formatarTelefone(cliente.telefone)}
-                  {cliente.endereco ? ` · ${cliente.endereco}` : ""}
-                </p>
-                <div className="mt-2 flex items-center justify-end gap-1 border-t border-border pt-2">
-                  <ClienteModal
-                    clienteExistente={cliente}
-                    trigger={
-                      <IconButton
-                        aria-label={`Editar ${cliente.nome}`}
-                        title="Editar"
-                        size="toque"
-                      >
-                        <Pencil className="h-4 w-4" strokeWidth={1.75} />
-                      </IconButton>
-                    }
-                  />
-                  <ConfirmDeleteButton
-                    itemName={cliente.nome}
-                    size="toque"
-                    onConfirm={excluirCliente.bind(null, cliente.id)}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="hidden overflow-hidden rounded-xl border border-border bg-white md:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-xs font-semibold text-neutro-500">
-                  Nome
-                </th>
-                <th className="px-4 py-3 text-xs font-semibold text-neutro-500">
-                  Telefone
-                </th>
-                <th className="px-4 py-3 text-xs font-semibold text-neutro-500">
-                  Endereço
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-neutro-500">
-                  Pedidos
-                </th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.map((cliente) => {
-                const total = totalPorCliente.get(cliente.id) ?? 0;
-                return (
-                  <tr
-                    key={cliente.id}
-                    className="group border-b border-border transition-colors duration-150 last:border-0 hover:bg-berinjela-50/60"
-                  >
-                    <td className="px-4 py-3 font-medium text-berinjela">
-                      <Link
-                        href={`/clientes/${cliente.id}`}
-                        className="hover:underline underline-offset-2"
-                      >
-                        {cliente.nome}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-neutro-700">
-                      {formatarTelefone(cliente.telefone)}
-                    </td>
-                    <td className="px-4 py-3 text-neutro-500">
-                      {cliente.endereco ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {total > 1 ? (
-                        <Badge tone="salvia">{total}</Badge>
-                      ) : (
-                        <span className="text-neutro-500">{total}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-                        <ClienteModal
-                          clienteExistente={cliente}
-                          trigger={
-                            <IconButton
-                              aria-label={`Editar ${cliente.nome}`}
-                              title="Editar"
-                            >
-                              <Pencil className="h-4 w-4" strokeWidth={1.75} />
-                            </IconButton>
-                          }
-                        />
-                        <ConfirmDeleteButton
-                          itemName={cliente.nome}
-                          onConfirm={excluirCliente.bind(null, cliente.id)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        </>
+        <ClientesLista clientes={clientes} totalPorCliente={totalPorCliente} />
       ) : (
         <EmptyState
           icon={Users}
