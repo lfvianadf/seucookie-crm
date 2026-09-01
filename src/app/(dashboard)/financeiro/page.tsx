@@ -193,11 +193,31 @@ export default async function FinanceiroPage({
             </div>
           </div>
           <p className="mt-2 text-xs text-neutro-500">
-            {f.encomenda.pedidos} encomenda{f.encomenda.pedidos === 1 ? "" : "s"} —{" "}
-            <em>conta na entrega por ora; o ciclo de acerto ainda não existe</em>
+            {f.encomenda.pedidos} acerto{f.encomenda.pedidos === 1 ? "" : "s"} neste
+            mês — <em>encomenda só vira faturamento quando é acertada</em>
           </p>
         </div>
       </div>
+
+      {f.aReceber.pedidos > 0 && (
+        <div className="mb-6">
+          <a href="/encomendas" className="block">
+            <div className="rounded-xl border border-atencao/40 bg-atencao-bg p-4 transition-shadow duration-150 hover:shadow-md">
+              <p className="mb-1 text-xs font-medium text-atencao-text">
+                A receber
+              </p>
+              <p className="text-xl font-semibold text-atencao-text">
+                R$ {f.aReceber.valor.toFixed(2)}
+              </p>
+              <p className="mt-1 text-xs text-atencao-text">
+                {f.aReceber.pedidos} encomenda{f.aReceber.pedidos === 1 ? "" : "s"}{" "}
+                entregue{f.aReceber.pedidos === 1 ? "" : "s"} aguardando acerto —
+                toque pra ver
+              </p>
+            </div>
+          </a>
+        </div>
+      )}
 
       <div className="mb-6 rounded-xl border border-border bg-white p-4">
         <div className="min-w-0">

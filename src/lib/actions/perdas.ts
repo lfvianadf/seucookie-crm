@@ -63,17 +63,22 @@ export async function registrarPerda(params: {
     }
   }
 
-  const { error } = await supabase.from("perdas").insert({
-    produto_id: produtoId,
-    quantidade,
-    custo_unitario: custoUnitario,
-    motivo: motivo?.trim() || null,
-    data: data ?? new Date().toISOString(),
-  });
+  const { data: perda, error } = await supabase
+    .from("perdas")
+    .insert({
+      produto_id: produtoId,
+      quantidade,
+      custo_unitario: custoUnitario,
+      motivo: motivo?.trim() || null,
+      data: data ?? new Date().toISOString(),
+    })
+    .select("id")
+    .single();
 
   if (error) throw new Error(error.message);
 
   revalidarPerdas();
+  return perda;
 }
 
 export async function excluirPerda(id: string) {

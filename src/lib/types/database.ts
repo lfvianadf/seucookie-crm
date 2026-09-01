@@ -37,6 +37,8 @@ export type OkrMetrica = "manual" | "vendas" | "cookies" | "pedidos" | "lucro";
 
 export type TipoCusto = "unica" | "recorrente" | "parcelado";
 
+export type EncomendaDestinoSobra = "estoque" | "perda";
+
 export interface Database {
   public: {
     Tables: {
@@ -293,6 +295,84 @@ export interface Database {
             columns: ["cliente_id"];
             isOneToOne: false;
             referencedRelation: "clientes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      encomenda_acertos: {
+        Row: {
+          id: string;
+          pedido_id: string;
+          data: string;
+          valor_recebido: number;
+          observacoes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pedido_id: string;
+          data?: string;
+          valor_recebido: number;
+          observacoes?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["encomenda_acertos"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "encomenda_acertos_pedido_id_fkey";
+            columns: ["pedido_id"];
+            isOneToOne: true;
+            referencedRelation: "pedidos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      encomenda_acerto_itens: {
+        Row: {
+          id: string;
+          acerto_id: string;
+          produto_id: string;
+          qtd_entregue: number;
+          qtd_sobra: number;
+          destino_sobra: EncomendaDestinoSobra;
+          preco_unitario: number;
+          perda_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          acerto_id: string;
+          produto_id: string;
+          qtd_entregue: number;
+          qtd_sobra: number;
+          destino_sobra: EncomendaDestinoSobra;
+          preco_unitario: number;
+          perda_id?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["encomenda_acerto_itens"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "encomenda_acerto_itens_acerto_id_fkey";
+            columns: ["acerto_id"];
+            isOneToOne: false;
+            referencedRelation: "encomenda_acertos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "encomenda_acerto_itens_produto_id_fkey";
+            columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "encomenda_acerto_itens_perda_id_fkey";
+            columns: ["perda_id"];
+            isOneToOne: false;
+            referencedRelation: "perdas";
             referencedColumns: ["id"];
           },
         ];

@@ -21,7 +21,9 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase
         .from("pedidos")
-        .select("id, status, tipo_venda, valor_total, data_pedido, clientes(nome)")
+        .select(
+          "id, status, tipo_venda, valor_total, data_pedido, clientes(nome), encomenda_acertos(id)"
+        )
         .order("data_pedido", { ascending: false }),
       supabase
         .from("producoes")
@@ -61,11 +63,10 @@ export default async function DashboardPage() {
     .filter((p) => new Date(p.data) >= inicioMes)
     .reduce((soma, p) => soma + p.quantidade_produzida, 0);
 
-  // sem acerto ainda (fase 3 do plano de encomendas): por ora, toda
-  // encomenda entregue está "pendente" — vira contável quando o ciclo de
-  // acerto existir
+  // entregue e ainda sem acerto — encomenda_acertos vem null quando não há
+  // acerto, por causa do índice único em pedido_id (relação 1:1)
   const encomendasPendentes = encomendasLista.filter(
-    (p) => p.status === "entregue"
+    (p) => p.status === "entregue" && !p.encomenda_acertos
   ).length;
 
   const pedidosRecentes = varejoLista.slice(0, 6);

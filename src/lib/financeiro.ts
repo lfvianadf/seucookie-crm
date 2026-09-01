@@ -15,12 +15,14 @@ export type ResumoFinanceiro = {
   vendas: number;
   varejo: ResumoCanal;
   /**
-   * Fase 1: sem ciclo de acerto ainda, então encomenda soma aqui na
-   * entrega, igual varejo — só separada. Na fase 3, quando o acerto
-   * existir, este número passa a vir só do que foi acertado no mês, e
-   * `aReceber` aparece com o que foi entregue mas ainda não.
+   * Consignado: só conta como venda no mês do ACERTO (encomenda_acertos.data),
+   * não no mês da entrega. Antes do acerto, o valor potencial aparece em
+   * `aReceber`, não aqui — contar na entrega mostraria dinheiro que ainda
+   * não é seu, exatamente o problema que motivou o ciclo de acerto.
    */
   encomenda: ResumoCanal;
+  /** encomendas entregues e ainda sem acerto — saldo em aberto, não do mês */
+  aReceber: { valor: number; pedidos: number };
   pedidos: number;
   cookiesProduzidos: number;
   /** custo de receita dos produtos vendidos no mês (varejo + encomenda) */
@@ -76,6 +78,8 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
 
   const [
     { data: pedidos },
+    { data: acertosDoMes },
+    { data: pendentes },
     { data: producoes },
     { data: lotes },
     { data: perdasDoMes },
@@ -85,14 +89,31 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     { data: receitaInsumos },
     { data: insumos },
   ] = await Promise.all([
+    // varejo continua por data_pedido; encomenda vem das outras duas
+    // queries (acerto do mês, e o saldo pendente sem filtro de mês)
     supabase
       .from("pedidos")
       .select(
         "id, valor_total, status, tipo_venda, pedido_itens(produto_id, quantidade)"
       )
+      .eq("tipo_venda", "varejo")
       .neq("status", "cancelado")
       .gte("data_pedido", inicio.toISOString())
       .lt("data_pedido", fim.toISOString()),
+    supabase
+      .from("encomenda_acertos")
+      .select(
+        "id, valor_recebido, pedido_id, encomenda_acerto_itens(produto_id, qtd_entregue, qtd_sobra)"
+      )
+      .gte("data", inicio.toISOString())
+      .lt("data", fim.toISOString()),
+    // "a receber": entregue e sem acerto ainda, sem filtro de mês — é saldo
+    // em aberto, mesmo critério já usado pro bloco de estoque atual
+    supabase
+      .from("pedidos")
+      .select("id, valor_total, encomenda_acertos(id)")
+      .eq("tipo_venda", "encomenda")
+      .eq("status", "entregue"),
     supabase
       .from("producoes")
       .select("quantidade_produzida")
@@ -117,9 +138,7 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     supabase.from("insumos").select("*"),
   ]);
 
-  const pedidosLista = pedidos ?? [];
-  const varejoLista = pedidosLista.filter((p) => p.tipo_venda === "varejo");
-  const encomendaLista = pedidosLista.filter((p) => p.tipo_venda === "encomenda");
+  const varejoLista = pedidos ?? [];
 
   const cookiesProduzidos = (producoes ?? []).reduce(
     (s, p) => s + p.quantidade_produzida,
@@ -155,7 +174,7 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     );
   }
 
-  function montarResumoCanal(lista: typeof pedidosLista): ResumoCanal {
+  function montarResumoCanal(lista: typeof varejoLista): ResumoCanal {
     const canalVendas = lista.reduce((s, p) => s + Number(p.valor_total), 0);
     const canalCusto = lista.reduce((s, p) => s + custoDoPedido(p), 0);
     return {
@@ -168,9 +187,42 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
   }
 
   const varejo = montarResumoCanal(varejoLista);
-  // fase 1: encomenda soma na entrega, sem ciclo de acerto ainda (ver
-  // comentário no tipo ResumoFinanceiro.encomenda)
-  const encomenda = montarResumoCanal(encomendaLista);
+
+  // Encomenda vem dos ACERTOS do mês, não dos pedidos criados no mês — é a
+  // competência do dinheiro. Custo usa (entregue - sobra): a sobra que
+  // voltou ao estoque não é custo de venda, e a que virou perda já entra em
+  // `perdas` separadamente — somar aqui contaria o prejuízo duas vezes.
+  const acertosLista = acertosDoMes ?? [];
+  const encomenda: ResumoCanal = {
+    vendas: acertosLista.reduce((s, a) => s + Number(a.valor_recebido), 0),
+    custoDosVendidos: acertosLista.reduce((soma, acerto) => {
+      const custoAcerto = acerto.encomenda_acerto_itens.reduce(
+        (s, item) =>
+          s +
+          (custoPorProduto.get(item.produto_id) ?? 0) *
+            Math.max(item.qtd_entregue - item.qtd_sobra, 0),
+        0
+      );
+      return soma + custoAcerto;
+    }, 0),
+    margemBruta: 0, // preenchido abaixo, depois de vendas/custo calculados
+    pedidos: acertosLista.length,
+  };
+  encomenda.margemBruta =
+    encomenda.vendas > 0
+      ? ((encomenda.vendas - encomenda.custoDosVendidos) / encomenda.vendas) * 100
+      : 0;
+
+  // a receber: entregue e sem acerto — encomenda_acertos vem null quando
+  // não há acerto (é relação 1:1 por causa do índice único em pedido_id,
+  // então o PostgREST tipa como objeto e não array)
+  const pendentesSemAcerto = (pendentes ?? []).filter(
+    (p) => !p.encomenda_acertos
+  );
+  const aReceber = {
+    valor: pendentesSemAcerto.reduce((s, p) => s + Number(p.valor_total), 0),
+    pedidos: pendentesSemAcerto.length,
+  };
 
   const vendas = varejo.vendas + encomenda.vendas;
   const custoDosVendidos = varejo.custoDosVendidos + encomenda.custoDosVendidos;
@@ -224,7 +276,8 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     vendas,
     varejo,
     encomenda,
-    pedidos: pedidosLista.length,
+    aReceber,
+    pedidos: varejo.pedidos + encomenda.pedidos,
     cookiesProduzidos,
     custoDosVendidos,
     comprasDeInsumo,
