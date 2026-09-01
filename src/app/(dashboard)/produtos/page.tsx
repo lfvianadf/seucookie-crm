@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Cookie, Package, Pencil, Plus } from "lucide-react";
+import { Cookie, Package, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { excluirProduto } from "@/lib/actions/produtos";
 import { ProdutoModal } from "@/components/produto-modal";
@@ -7,7 +7,6 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { DisponibilidadeToggle } from "@/components/disponibilidade-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { calcularCustoReceita } from "@/lib/receita-custo";
@@ -101,103 +100,103 @@ export default async function ProdutosPage() {
               margem !== null && preco > 0 ? (margem / preco) * 100 : null;
 
             return (
-              <div
+              <ProdutoModal
                 key={produto.id}
-                className="overflow-hidden rounded-xl border border-border bg-white transition-shadow duration-150 hover:shadow-md"
-              >
-                <div className="relative aspect-square w-full bg-berinjela-50">
-                  {produto.foto_url ? (
-                    <Image
-                      src={produto.foto_url}
-                      alt={produto.nome}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 220px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-neutro-300">
-                      {ehBox ? (
-                        <Package className="h-8 w-8" strokeWidth={1.5} />
+                receitas={receitasLista}
+                cookiesDisponiveis={cookiesLista}
+                produtoExistente={produto}
+                boxCookieIdsExistentes={cookieIdsDaBox}
+                trigger={
+                  <div className="cursor-pointer overflow-hidden rounded-xl border border-border bg-white transition-shadow duration-150 hover:shadow-md">
+                    <div className="relative aspect-square w-full bg-berinjela-50">
+                      {produto.foto_url ? (
+                        <Image
+                          src={produto.foto_url}
+                          alt={produto.nome}
+                          fill
+                          sizes="(max-width: 640px) 50vw, 220px"
+                          className="object-cover"
+                        />
                       ) : (
-                        <Cookie className="h-8 w-8" strokeWidth={1.5} />
+                        <div className="flex h-full w-full items-center justify-center text-neutro-300">
+                          {ehBox ? (
+                            <Package className="h-8 w-8" strokeWidth={1.5} />
+                          ) : (
+                            <Cookie className="h-8 w-8" strokeWidth={1.5} />
+                          )}
+                        </div>
+                      )}
+                      {ehBox && (
+                        <span className="absolute left-2 top-2">
+                          <Badge tone="neutral">Box</Badge>
+                        </span>
                       )}
                     </div>
-                  )}
-                  {ehBox && (
-                    <span className="absolute left-2 top-2">
-                      <Badge tone="neutral">Box</Badge>
-                    </span>
-                  )}
-                </div>
-                <div className="p-3">
-                  <p className="truncate text-sm font-medium text-berinjela">
-                    {produto.nome}
-                  </p>
-                  <p className="mb-2.5 text-xs text-neutro-500">
-                    {ehBox && produto.qtd_cookies_box
-                      ? `${produto.qtd_cookies_box} cookies`
-                      : (produto.capitulo ?? "—")}
-                    {!ehBox && produto.acrescimo_box > 0
-                      ? ` · +R$ ${Number(produto.acrescimo_box).toFixed(2)} em box`
-                      : ""}
-                    {produto.numero_receita ? ` · nº ${produto.numero_receita}` : ""}
-                    {" · "}
-                    <span
-                      className={
-                        estoqueExibido <= 0
-                          ? "font-medium text-erro-text"
-                          : estoqueExibido <= ESTOQUE_BAIXO
-                            ? "font-medium text-atencao-text"
-                            : undefined
-                      }
-                    >
-                      {estoqueExibido} em estoque
-                    </span>
-                  </p>
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-berinjela">
-                      R$ {Number(produto.preco).toFixed(2)}
-                    </span>
-                    {ehBox ? (
-                      <Badge tone={produto.disponivel ? "salvia" : "neutral"}>
-                        {produto.disponivel ? "Disponível" : "Indisponível"}
-                      </Badge>
-                    ) : (
-                      <DisponibilidadeToggle
-                        id={produto.id}
-                        disponivel={produto.disponivel}
-                      />
-                    )}
+                    <div className="p-3">
+                      <p className="truncate text-sm font-medium text-berinjela">
+                        {produto.nome}
+                      </p>
+                      <p className="mb-2.5 text-xs text-neutro-500">
+                        {ehBox && produto.qtd_cookies_box
+                          ? `${produto.qtd_cookies_box} cookies`
+                          : (produto.capitulo ?? "—")}
+                        {!ehBox && produto.acrescimo_box > 0
+                          ? ` · +R$ ${Number(produto.acrescimo_box).toFixed(2)} em box`
+                          : ""}
+                        {produto.numero_receita ? ` · nº ${produto.numero_receita}` : ""}
+                        {" · "}
+                        <span
+                          className={
+                            estoqueExibido <= 0
+                              ? "font-medium text-erro-text"
+                              : estoqueExibido <= ESTOQUE_BAIXO
+                                ? "font-medium text-atencao-text"
+                                : undefined
+                          }
+                        >
+                          {estoqueExibido} em estoque
+                        </span>
+                      </p>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-berinjela">
+                          R$ {Number(produto.preco).toFixed(2)}
+                        </span>
+                        {ehBox ? (
+                          <Badge tone={produto.disponivel ? "salvia" : "neutral"}>
+                            {produto.disponivel ? "Disponível" : "Indisponível"}
+                          </Badge>
+                        ) : (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <DisponibilidadeToggle
+                              id={produto.id}
+                              disponivel={produto.disponivel}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {margem !== null && (
+                        <p
+                          className={`mb-3 text-xs font-medium ${
+                            margem >= 0 ? "text-salvia-text" : "text-erro-text"
+                          }`}
+                        >
+                          Margem R$ {margem.toFixed(2)}
+                          {margemPercent !== null && ` (${margemPercent.toFixed(0)}%)`}
+                        </p>
+                      )}
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="-mx-1 flex items-center justify-end gap-0.5 border-t border-border pt-2"
+                      >
+                        <ConfirmDeleteButton
+                          itemName={produto.nome}
+                          onConfirm={excluirProduto.bind(null, produto.id)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  {margem !== null && (
-                    <p
-                      className={`mb-3 text-xs font-medium ${
-                        margem >= 0 ? "text-salvia-text" : "text-erro-text"
-                      }`}
-                    >
-                      Margem R$ {margem.toFixed(2)}
-                      {margemPercent !== null && ` (${margemPercent.toFixed(0)}%)`}
-                    </p>
-                  )}
-                  <div className="-mx-1 flex items-center justify-end gap-0.5 border-t border-border pt-2">
-                    <ProdutoModal
-                      receitas={receitasLista}
-                      cookiesDisponiveis={cookiesLista}
-                      produtoExistente={produto}
-                      boxCookieIdsExistentes={cookieIdsDaBox}
-                      trigger={
-                        <IconButton aria-label={`Editar ${produto.nome}`} title="Editar">
-                          <Pencil className="h-4 w-4" strokeWidth={1.75} />
-                        </IconButton>
-                      }
-                    />
-                    <ConfirmDeleteButton
-                      itemName={produto.nome}
-                      onConfirm={excluirProduto.bind(null, produto.id)}
-                    />
-                  </div>
-                </div>
-              </div>
+                }
+              />
             );
           })}
         </div>
