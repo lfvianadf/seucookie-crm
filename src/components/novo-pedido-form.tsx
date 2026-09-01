@@ -12,7 +12,7 @@ import { InputTelefone } from "@/components/ui/input-telefone";
 import { Button } from "@/components/ui/button";
 import { calcularPrecoBox, totalEscolhido } from "@/lib/preco-box";
 import { telefoneValido, formatarTelefone } from "@/lib/telefone";
-import type { TipoProduto } from "@/lib/types/database";
+import type { TipoProduto, PedidoTipoVenda } from "@/lib/types/database";
 
 type Produto = {
   id: string;
@@ -46,10 +46,13 @@ type CaixaCarrinho = {
 export function NovoPedidoForm({
   produtos,
   boxCookies,
+  tipoVenda = "varejo",
   onSuccess,
 }: {
   produtos: Produto[];
   boxCookies: BoxCookies;
+  /** encomenda mostra o campo de data prevista e muda o texto do botão */
+  tipoVenda?: PedidoTipoVenda;
   onSuccess?: () => void;
 }) {
   const [telefone, setTelefone] = useState("");
@@ -57,6 +60,7 @@ export function NovoPedidoForm({
   const [enderecoCliente, setEnderecoCliente] = useState("");
   const [clienteEncontrado, setClienteEncontrado] = useState(false);
   const [observacoes, setObservacoes] = useState("");
+  const [dataEntregaPrevista, setDataEntregaPrevista] = useState("");
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
   const [caixas, setCaixas] = useState<CaixaCarrinho[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -262,6 +266,10 @@ export function NovoPedidoForm({
           clienteEndereco: enderecoCliente.trim() || undefined,
           itens,
           observacoes: observacoes.trim() || undefined,
+          tipoVenda,
+          dataEntregaPrevista: dataEntregaPrevista
+            ? new Date(dataEntregaPrevista).toISOString()
+            : undefined,
         });
         onSuccess?.();
       } catch {
@@ -325,6 +333,17 @@ export function NovoPedidoForm({
                 onChange={(e) => setEnderecoCliente(e.target.value)}
               />
             </div>
+            {tipoVenda === "encomenda" && (
+              <div className="sm:col-span-2">
+                <Label htmlFor="pedido-data-entrega">Data de entrega combinada</Label>
+                <Input
+                  id="pedido-data-entrega"
+                  type="date"
+                  value={dataEntregaPrevista}
+                  onChange={(e) => setDataEntregaPrevista(e.target.value)}
+                />
+              </div>
+            )}
           </div>
           {clienteEncontrado && (
             <p className="mt-3 flex items-center gap-1.5 text-xs text-salvia-text">
@@ -532,7 +551,7 @@ export function NovoPedidoForm({
           )}
 
           <Button onClick={handleSubmit} loading={isPending} className="w-full">
-            Criar pedido
+            {tipoVenda === "encomenda" ? "Criar encomenda" : "Criar pedido"}
           </Button>
         </div>
       </div>

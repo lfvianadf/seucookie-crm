@@ -14,6 +14,7 @@ import {
   Factory,
   Wallet,
   Target,
+  PackageCheck,
   X,
 } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
@@ -23,6 +24,7 @@ const LINKS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/produtos", label: "Cardápio", icon: Cookie },
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
+  { href: "/encomendas", label: "Encomendas", icon: PackageCheck },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/fidelidade", label: "Fidelidade", icon: Stamp },
   { href: "/insumos", label: "Estoque", icon: Package },

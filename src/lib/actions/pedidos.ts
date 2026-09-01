@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { encontrarOuCriarCliente } from "@/lib/actions/clientes";
-import type { PedidoStatus } from "@/lib/types/database";
+import type { PedidoStatus, PedidoTipoVenda } from "@/lib/types/database";
 
 export type ItemCarrinho = {
   produto_id: string;
@@ -21,9 +21,18 @@ export async function criarPedidoManual(params: {
   clienteEndereco?: string;
   itens: ItemCarrinho[];
   observacoes?: string;
+  tipoVenda?: PedidoTipoVenda;
+  dataEntregaPrevista?: string;
 }) {
-  const { clienteNome, clienteTelefone, clienteEndereco, itens, observacoes } =
-    params;
+  const {
+    clienteNome,
+    clienteTelefone,
+    clienteEndereco,
+    itens,
+    observacoes,
+    tipoVenda = "varejo",
+    dataEntregaPrevista,
+  } = params;
 
   if (!clienteNome || !clienteTelefone || itens.length === 0) {
     throw new Error("Cliente e ao menos um item são obrigatórios.");
@@ -49,6 +58,8 @@ export async function criarPedidoManual(params: {
       status: "novo",
       valor_total: valorTotal,
       observacoes: observacoes || null,
+      tipo_venda: tipoVenda,
+      data_entrega_prevista: dataEntregaPrevista || null,
     })
     .select()
     .single();
@@ -85,13 +96,37 @@ export async function criarPedidoManual(params: {
     }
   }
 
-  revalidatePath("/pedidos");
+  revalidatePath(tipoVenda === "encomenda" ? "/encomendas" : "/pedidos");
+  revalidatePath("/");
+
+  return pedido;
+}
+
+/**
+ * Wrapper fino sobre criarPedidoManual — evita duplicar a lógica de
+ * composição de box só pra fixar tipoVenda='encomenda'.
+ */
+export async function criarEncomenda(params: {
+  clienteNome: string;
+  clienteTelefone: string;
+  clienteEndereco?: string;
+  itens: ItemCarrinho[];
+  observacoes?: string;
+  dataEntregaPrevista?: string;
+}) {
+  return criarPedidoManual({ ...params, tipoVenda: "encomenda" });
 }
 
 export async function atualizarStatusPedido(id: string, status: PedidoStatus) {
   const supabase = await createClient();
-  await supabase.from("pedidos").update({ status }).eq("id", id);
-  revalidatePath("/pedidos");
+  const { data } = await supabase
+    .from("pedidos")
+    .update({ status })
+    .eq("id", id)
+    .select("tipo_venda")
+    .single();
+  revalidatePath(data?.tipo_venda === "encomenda" ? "/encomendas" : "/pedidos");
+  revalidatePath("/");
 }
 
 export async function atualizarPedido(params: {
@@ -180,7 +215,13 @@ export async function atualizarPedido(params: {
 
 export async function excluirPedido(id: string) {
   const supabase = await createClient();
+  const { data: pedido } = await supabase
+    .from("pedidos")
+    .select("tipo_venda")
+    .eq("id", id)
+    .single();
   const { error } = await supabase.from("pedidos").delete().eq("id", id);
   if (error) throw error;
-  revalidatePath("/pedidos");
+  revalidatePath(pedido?.tipo_venda === "encomenda" ? "/encomendas" : "/pedidos");
+  revalidatePath("/");
 }
