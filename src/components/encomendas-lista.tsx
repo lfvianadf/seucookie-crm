@@ -21,6 +21,7 @@ import {
   temAcertoRegistrado,
   SITUACAO_ENCOMENDA_LABEL,
   SITUACAO_ENCOMENDA_TONE,
+  type SituacaoEncomenda,
 } from "@/lib/encomenda";
 import type { PedidoStatus } from "@/lib/types/database";
 
@@ -75,6 +76,20 @@ function formatarData(iso: string) {
   });
 }
 
+// ordem do toggle: "todas" primeiro, depois o que mais exige atenção
+const FILTRO_ORDEM: ("todas" | SituacaoEncomenda)[] = [
+  "todas",
+  "entregue_pendente",
+  "agendada",
+  "atrasada",
+  "acertada",
+];
+
+const FILTRO_LABEL: Record<"todas" | SituacaoEncomenda, string> = {
+  todas: "Todas",
+  ...SITUACAO_ENCOMENDA_LABEL,
+};
+
 export function EncomendasLista({
   encomendasIniciais,
 }: {
@@ -91,6 +106,7 @@ export function EncomendasLista({
   }
 
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<"todas" | SituacaoEncomenda>("entregue_pendente");
   const [, startTransition] = useTransition();
   const toast = useToast();
 
@@ -115,7 +131,7 @@ export function EncomendasLista({
     return <EmptyState icon={Package} title="Nenhuma encomenda ainda." />;
   }
 
-  const comAcertoTodo = encomendas.map((e) => ({
+  const comSituacao = encomendas.map((e) => ({
     ...e,
     situacao: situacaoEncomenda({
       status: e.status,
@@ -124,46 +140,81 @@ export function EncomendasLista({
     }),
   }));
 
-  // "precisa de ação" primeiro, mais antiga primeiro — é o que exige clique
-  const pendentes = comAcertoTodo
-    .filter((e) => e.situacao === "entregue_pendente")
-    .sort((a, b) => a.data_pedido.localeCompare(b.data_pedido));
+  const contagemPorFiltro: Record<"todas" | SituacaoEncomenda, number> = {
+    todas: comSituacao.length,
+    entregue_pendente: 0,
+    agendada: 0,
+    atrasada: 0,
+    acertada: 0,
+  };
+  for (const e of comSituacao) contagemPorFiltro[e.situacao]++;
 
-  const agendadas = comAcertoTodo
-    .filter((e) => e.situacao === "agendada" || e.situacao === "atrasada")
-    .sort((a, b) =>
-      (a.data_entrega_prevista ?? "").localeCompare(b.data_entrega_prevista ?? "")
-    );
+  const filtradas =
+    filtro === "todas" ? comSituacao : comSituacao.filter((e) => e.situacao === filtro);
 
-  const outras = comAcertoTodo.filter(
-    (e) => e.situacao !== "entregue_pendente" && e.situacao !== "agendada" && e.situacao !== "atrasada"
-  );
+  // agrupa por cliente — cada cliente vira uma seção própria, ordenada por
+  // nome; dentro do grupo, mais antiga primeiro (é o que exige ação primeiro)
+  const grupos = new Map<string, { nome: string; itens: typeof filtradas }>();
+  for (const encomenda of filtradas) {
+    const chave = encomenda.clientes?.nome ?? "—";
+    if (!grupos.has(chave)) {
+      grupos.set(chave, { nome: chave, itens: [] });
+    }
+    grupos.get(chave)!.itens.push(encomenda);
+  }
+  const gruposPorCliente = Array.from(grupos.values())
+    .map((g) => ({
+      ...g,
+      itens: g.itens.sort((a, b) => a.data_pedido.localeCompare(b.data_pedido)),
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   const acertoSelecionado = selecionada ? primeiroAcerto(selecionada.encomenda_acertos) : null;
 
   return (
-    <div className="space-y-6">
-      <Secao
-        titulo="Precisa de ação"
-        encomendas={pendentes}
-        moverStatus={moverStatus}
-        remover={remover}
-        selecionar={setSelecionadaId}
-      />
-      <Secao
-        titulo="Agendadas"
-        encomendas={agendadas}
-        moverStatus={moverStatus}
-        remover={remover}
-        selecionar={setSelecionadaId}
-      />
-      <Secao
-        titulo="Outras"
-        encomendas={outras}
-        moverStatus={moverStatus}
-        remover={remover}
-        selecionar={setSelecionadaId}
-      />
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {FILTRO_ORDEM.map((valor) => {
+          const ativo = filtro === valor;
+          return (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setFiltro(valor)}
+              className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ease-out ${
+                ativo
+                  ? "border-berinjela bg-berinjela text-white"
+                  : "border-border-strong bg-white text-berinjela hover:border-berinjela/40"
+              }`}
+            >
+              {FILTRO_LABEL[valor]}
+              <span className={`ml-1.5 ${ativo ? "text-white/70" : "text-neutro-400"}`}>
+                {contagemPorFiltro[valor]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {gruposPorCliente.length === 0 ? (
+        <EmptyState
+          icon={Package}
+          title={`Nenhuma encomenda em "${FILTRO_LABEL[filtro]}".`}
+        />
+      ) : (
+        <div className="space-y-4">
+          {gruposPorCliente.map((grupo) => (
+            <GrupoCliente
+              key={grupo.nome}
+              nome={grupo.nome}
+              encomendas={grupo.itens}
+              moverStatus={moverStatus}
+              remover={remover}
+              selecionar={setSelecionadaId}
+            />
+          ))}
+        </div>
+      )}
 
       <EncomendaDetalheModal
         encomenda={
@@ -198,25 +249,23 @@ type EncomendaComSituacao = Encomenda & {
   situacao: ReturnType<typeof situacaoEncomenda>;
 };
 
-function Secao({
-  titulo,
+function GrupoCliente({
+  nome,
   encomendas,
   moverStatus,
   remover,
   selecionar,
 }: {
-  titulo: string;
+  nome: string;
   encomendas: EncomendaComSituacao[];
   moverStatus: (id: string, status: PedidoStatus) => void;
   remover: (id: string) => Promise<void>;
   selecionar: (id: string) => void;
 }) {
-  if (encomendas.length === 0) return null;
-
   return (
     <section>
       <div className="mb-2 flex items-baseline gap-2">
-        <h2 className="text-sm font-semibold text-berinjela">{titulo}</h2>
+        <h2 className="text-sm font-semibold text-berinjela">{nome}</h2>
         <span className="text-xs text-neutro-500">{encomendas.length}</span>
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -234,9 +283,6 @@ function Secao({
               >
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center gap-2">
-                    <p className="truncate text-sm font-medium text-berinjela">
-                      {encomenda.clientes?.nome ?? "—"}
-                    </p>
                     <Badge tone={SITUACAO_ENCOMENDA_TONE[encomenda.situacao]}>
                       {SITUACAO_ENCOMENDA_LABEL[encomenda.situacao]}
                     </Badge>
