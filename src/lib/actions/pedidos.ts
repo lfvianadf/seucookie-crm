@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { encontrarOuCriarCliente } from "@/lib/actions/clientes";
-import type { PedidoStatus, PedidoTipoVenda } from "@/lib/types/database";
+import type { PedidoOrigem, PedidoStatus, PedidoTipoVenda } from "@/lib/types/database";
 
 export type ItemCarrinho = {
   produto_id: string;
@@ -23,6 +23,8 @@ export async function criarPedidoManual(params: {
   observacoes?: string;
   tipoVenda?: PedidoTipoVenda;
   dataEntregaPrevista?: string;
+  origem?: PedidoOrigem;
+  valorLiquidoRecebido?: number | null;
 }) {
   const {
     clienteNome,
@@ -32,6 +34,8 @@ export async function criarPedidoManual(params: {
     observacoes,
     tipoVenda = "varejo",
     dataEntregaPrevista,
+    origem = "manual",
+    valorLiquidoRecebido,
   } = params;
 
   if (!clienteNome || !clienteTelefone || itens.length === 0) {
@@ -54,9 +58,10 @@ export async function criarPedidoManual(params: {
     .from("pedidos")
     .insert({
       cliente_id: cliente.id,
-      origem: "manual",
+      origem,
       status: "novo",
       valor_total: valorTotal,
+      valor_liquido_recebido: valorLiquidoRecebido ?? null,
       observacoes: observacoes || null,
       tipo_venda: tipoVenda,
       data_entrega_prevista: dataEntregaPrevista || null,

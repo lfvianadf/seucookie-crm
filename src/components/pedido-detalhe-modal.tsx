@@ -17,7 +17,8 @@ import {
   STATUS_TONE,
   STATUS_SELECT_CLASSES,
 } from "@/lib/pedido-status";
-import type { PedidoStatus, TipoProduto } from "@/lib/types/database";
+import { ORIGEM_LABEL, ORIGEM_TONE } from "@/lib/pedido-origem";
+import type { PedidoOrigem, PedidoStatus, TipoProduto } from "@/lib/types/database";
 
 type Item = {
   id: string;
@@ -34,8 +35,9 @@ type Item = {
 type Pedido = {
   id: string;
   status: PedidoStatus;
-  origem: string;
+  origem: PedidoOrigem;
   valor_total: number;
+  valor_liquido_recebido: number | null;
   observacoes: string | null;
   data_pedido: string;
   clientes: { nome: string; telefone: string; endereco: string | null } | null;
@@ -209,8 +211,8 @@ export function PedidoDetalheModal({
                   </option>
                 ))}
               </select>
-              <Badge tone="neutral" className="uppercase tracking-wide">
-                {pedido.origem}
+              <Badge tone={ORIGEM_TONE[pedido.origem]} className="uppercase tracking-wide">
+                {ORIGEM_LABEL[pedido.origem]}
               </Badge>
             </div>
 
@@ -386,7 +388,11 @@ export function PedidoDetalheModal({
           )}
 
           <div className="flex items-center justify-between border-t border-border pt-4">
-            <span className="text-sm font-medium text-berinjela">Total</span>
+            <span className="text-sm font-medium text-berinjela">
+              {!modoEdicao && pedido.origem === "ifood" && pedido.valor_liquido_recebido != null
+                ? "Valor do pedido"
+                : "Total"}
+            </span>
             <span className="text-base font-semibold text-berinjela">
               R${" "}
               {(modoEdicao
@@ -395,6 +401,17 @@ export function PedidoDetalheModal({
               ).toFixed(2)}
             </span>
           </div>
+
+          {!modoEdicao && pedido.origem === "ifood" && pedido.valor_liquido_recebido != null && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-erro-text">
+                Recebido de fato
+              </span>
+              <span className="text-base font-semibold text-erro-text">
+                R$ {Number(pedido.valor_liquido_recebido).toFixed(2)}
+              </span>
+            </div>
+          )}
 
           {modoEdicao && (
             <div className="flex justify-end gap-2">

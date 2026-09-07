@@ -102,7 +102,7 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     supabase
       .from("pedidos")
       .select(
-        "id, valor_total, status, tipo_venda, pedido_itens(produto_id, quantidade)"
+        "id, valor_total, valor_liquido_recebido, status, tipo_venda, pedido_itens(produto_id, quantidade)"
       )
       .eq("tipo_venda", "varejo")
       .neq("status", "cancelado")
@@ -183,7 +183,12 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
   }
 
   function montarResumoCanal(lista: typeof varejoLista): ResumoCanal {
-    const canalVendas = lista.reduce((s, p) => s + Number(p.valor_total), 0);
+    // iFood cobra comissão/taxa — quando o valor líquido de fato recebido
+    // está registrado, ele conta em vez do valor cheio do pedido
+    const canalVendas = lista.reduce(
+      (s, p) => s + Number(p.valor_liquido_recebido ?? p.valor_total),
+      0
+    );
     const canalCusto = lista.reduce((s, p) => s + custoDoPedido(p), 0);
     return {
       vendas: canalVendas,

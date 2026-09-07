@@ -10,7 +10,7 @@ export default async function PedidosPage() {
       supabase
         .from("pedidos")
         .select(
-          "id, status, origem, valor_total, observacoes, data_pedido, clientes(nome, telefone, endereco), pedido_itens(id, produto_id, quantidade, preco_unitario, produtos(nome, tipo_produto), pedido_item_composicao(quantidade, produtos(nome)))"
+          "id, status, origem, valor_total, valor_liquido_recebido, observacoes, data_pedido, clientes(nome, telefone, endereco), pedido_itens(id, produto_id, quantidade, preco_unitario, produtos(nome, tipo_produto), pedido_item_composicao(quantidade, produtos(nome)))"
         )
         // encomenda tem tela própria (/encomendas) — este Kanban é só varejo
         .eq("tipo_venda", "varejo")

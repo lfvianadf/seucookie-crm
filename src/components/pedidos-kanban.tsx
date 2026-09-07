@@ -10,7 +10,9 @@ import {
   STATUS_LABEL,
   STATUS_COLUNA_ACCENT,
 } from "@/lib/pedido-status";
-import type { PedidoStatus, TipoProduto } from "@/lib/types/database";
+import { ORIGEM_LABEL, ORIGEM_TONE } from "@/lib/pedido-origem";
+import { Badge } from "@/components/ui/badge";
+import type { PedidoOrigem, PedidoStatus, TipoProduto } from "@/lib/types/database";
 
 type Item = {
   id: string;
@@ -27,8 +29,9 @@ type Item = {
 type Pedido = {
   id: string;
   status: PedidoStatus;
-  origem: string;
+  origem: PedidoOrigem;
   valor_total: number;
+  valor_liquido_recebido: number | null;
   observacoes: string | null;
   data_pedido: string;
   clientes: { nome: string; telefone: string; endereco: string | null } | null;
@@ -138,9 +141,16 @@ export function PedidosKanban({
                     }`}
                   >
                     <div className="mb-1 flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium text-berinjela">
-                        {pedido.clientes?.nome ?? "—"}
-                      </p>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate text-sm font-medium text-berinjela">
+                          {pedido.clientes?.nome ?? "—"}
+                        </p>
+                        {pedido.origem !== "manual" && (
+                          <Badge tone={ORIGEM_TONE[pedido.origem]} className="shrink-0">
+                            {ORIGEM_LABEL[pedido.origem]}
+                          </Badge>
+                        )}
+                      </div>
                       <span className="shrink-0 text-xs font-semibold text-berinjela">
                         R$ {Number(pedido.valor_total).toFixed(2)}
                       </span>

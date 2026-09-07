@@ -12,7 +12,7 @@ import { InputTelefone } from "@/components/ui/input-telefone";
 import { Button } from "@/components/ui/button";
 import { calcularPrecoBox, totalEscolhido } from "@/lib/preco-box";
 import { telefoneValido, formatarTelefone } from "@/lib/telefone";
-import type { TipoProduto, PedidoTipoVenda } from "@/lib/types/database";
+import type { TipoProduto, PedidoTipoVenda, PedidoOrigem } from "@/lib/types/database";
 
 type Produto = {
   id: string;
@@ -61,6 +61,8 @@ export function NovoPedidoForm({
   const [clienteEncontrado, setClienteEncontrado] = useState(false);
   const [observacoes, setObservacoes] = useState("");
   const [dataEntregaPrevista, setDataEntregaPrevista] = useState("");
+  const [origem, setOrigem] = useState<PedidoOrigem>("manual");
+  const [valorLiquidoRecebido, setValorLiquidoRecebido] = useState("");
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
   const [caixas, setCaixas] = useState<CaixaCarrinho[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -270,6 +272,11 @@ export function NovoPedidoForm({
           dataEntregaPrevista: dataEntregaPrevista
             ? new Date(dataEntregaPrevista).toISOString()
             : undefined,
+          origem,
+          valorLiquidoRecebido:
+            origem === "ifood" && valorLiquidoRecebido
+              ? Number(valorLiquidoRecebido)
+              : undefined,
         });
         onSuccess?.();
       } catch {
@@ -350,6 +357,57 @@ export function NovoPedidoForm({
               <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.75} />
               Cliente encontrado.
             </p>
+          )}
+
+          {tipoVenda === "varejo" && (
+            <div className="mt-4 border-t border-border pt-4">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOrigem("manual")}
+                  className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ease-out ${
+                    origem === "manual"
+                      ? "border-berinjela bg-berinjela text-white"
+                      : "border-border-strong bg-white text-berinjela hover:border-berinjela/40"
+                  }`}
+                >
+                  Pedido normal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrigem("ifood")}
+                  className={`min-h-9 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ease-out ${
+                    origem === "ifood"
+                      ? "border-erro bg-erro text-white"
+                      : "border-border-strong bg-white text-berinjela hover:border-erro/40"
+                  }`}
+                >
+                  iFood
+                </button>
+              </div>
+
+              {origem === "ifood" && (
+                <div className="mt-3 rounded-lg border border-erro/30 bg-erro-bg p-3">
+                  <Label htmlFor="pedido-valor-liquido">
+                    Valor líquido recebido
+                  </Label>
+                  <Input
+                    id="pedido-valor-liquido"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={valorLiquidoRecebido}
+                    onChange={(e) => setValorLiquidoRecebido(e.target.value)}
+                    placeholder="0,00"
+                  />
+                  <p className="mt-1.5 text-xs text-erro-text">
+                    O que sobra depois da taxa do iFood — é isso que entra no
+                    Financeiro, não o valor do pedido.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

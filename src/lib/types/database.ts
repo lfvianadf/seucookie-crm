@@ -6,7 +6,7 @@ export type PedidoStatus =
   | "entregue"
   | "cancelado";
 
-export type PedidoOrigem = "site" | "manual";
+export type PedidoOrigem = "site" | "manual" | "ifood";
 
 export type PedidoTipoVenda = "varejo" | "encomenda";
 
@@ -116,6 +116,8 @@ export interface Database {
           origem: PedidoOrigem;
           tipo_venda: PedidoTipoVenda;
           valor_total: number;
+          /** o que sobra depois da taxa/comissão — só preenchido pra origem 'ifood' */
+          valor_liquido_recebido: number | null;
           observacoes: string | null;
           data_pedido: string;
           data_entrega_prevista: string | null;
@@ -129,6 +131,7 @@ export interface Database {
           origem?: PedidoOrigem;
           tipo_venda?: PedidoTipoVenda;
           valor_total: number;
+          valor_liquido_recebido?: number | null;
           observacoes?: string | null;
           data_pedido?: string;
           data_entrega_prevista?: string | null;
