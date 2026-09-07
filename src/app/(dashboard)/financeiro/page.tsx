@@ -145,7 +145,7 @@ export default async function FinanceiroPage({
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-border bg-white p-4">
           <p className="mb-3 text-xs font-medium text-neutro-500">Varejo</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
               <p className="text-[11px] uppercase tracking-wide text-neutro-500">
                 Vendas
@@ -164,6 +164,14 @@ export default async function FinanceiroPage({
             </div>
             <div>
               <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Lucro
+              </p>
+              <p className="text-lg font-semibold text-salvia-text">
+                {reais(f.varejo.lucroBruto)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
                 Margem
               </p>
               <p className="text-lg font-semibold text-salvia-text">
@@ -178,7 +186,7 @@ export default async function FinanceiroPage({
 
         <div className="rounded-xl border border-border bg-white p-4">
           <p className="mb-3 text-xs font-medium text-neutro-500">Encomenda</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
               <p className="text-[11px] uppercase tracking-wide text-neutro-500">
                 Vendas
@@ -193,6 +201,14 @@ export default async function FinanceiroPage({
               </p>
               <p className="text-lg font-semibold text-berinjela">
                 {reais(f.encomenda.custoDosVendidos)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                Lucro
+              </p>
+              <p className="text-lg font-semibold text-salvia-text">
+                {reais(f.encomenda.lucroBruto)}
               </p>
             </div>
             <div>
@@ -242,12 +258,30 @@ export default async function FinanceiroPage({
               Faturamento estimado
             </p>
           </div>
-          <p className="text-xl font-semibold text-berinjela">
-            R$ {f.faturamentoEstimado.toFixed(2)}
-          </p>
-          <p className="mt-1 text-xs text-neutro-500">
-            Vendas + encomendas ainda a receber — projeção, não conta como
-            lucro até a encomenda ser acertada
+          <div className="flex items-end gap-4">
+            <div>
+              <p className="text-xl font-semibold text-berinjela">
+                R$ {f.faturamentoEstimado.toFixed(2)}
+              </p>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                faturamento
+              </p>
+            </div>
+            <div>
+              <p
+                className={`text-xl font-semibold ${f.lucroEstimado < 0 ? "text-erro-text" : "text-salvia-text"}`}
+              >
+                R$ {f.lucroEstimado.toFixed(2)}
+              </p>
+              <p className="text-[11px] uppercase tracking-wide text-neutro-500">
+                lucro
+              </p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutro-500">
+            Vendas do período + TODA encomenda em aberto (programada,
+            atrasada ou entregue) pelo valor cheio — projeção geral, não
+            conta como resultado real até a encomenda ser acertada
           </p>
         </div>
       </div>

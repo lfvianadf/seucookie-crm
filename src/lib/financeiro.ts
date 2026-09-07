@@ -7,6 +7,8 @@ import type { TipoCusto } from "@/lib/types/database";
 export type ResumoCanal = {
   vendas: number;
   custoDosVendidos: number;
+  /** vendas − custoDosVendidos, em R$ — mesma coisa que margemBruta, só que em valor */
+  lucroBruto: number;
   margemBruta: number;
   pedidos: number;
 };
@@ -25,12 +27,16 @@ export type ResumoFinanceiro = {
   /** encomendas entregues e ainda sem acerto — saldo em aberto, não do mês */
   aReceber: { valor: number; pedidos: number };
   /**
-   * vendas (reconhecidas) + a receber — quanto o mês tende a fechar se toda
-   * encomenda em aberto for acertada pelo valor cheio do pedido. Não é
-   * faturamento de verdade: é a projeção mais otimista, por isso nunca soma
-   * no `vendas`/`lucro` acima.
+   * vendas do período (reconhecidas) + TODA encomenda não cancelada que
+   * ainda não tem acerto — programada, atrasada ou já entregue —, pelo
+   * valor cheio do pedido. É a visão geral de "quanto isso tende a valer",
+   * sem filtro de mês pras encomendas em aberto (elas podem ter sido feitas
+   * ou entregues em qualquer época). Não é faturamento de verdade: nunca
+   * soma no `vendas`/`lucro` acima.
    */
   faturamentoEstimado: number;
+  /** faturamentoEstimado − custo estimado dos itens dessas encomendas − custos fixos do período */
+  lucroEstimado: number;
   pedidos: number;
   cookiesProduzidos: number;
   /** custo de receita dos produtos vendidos no mês (varejo + encomenda) */
@@ -120,13 +126,16 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
       )
       .gte("data", inicio.toISOString())
       .lt("data", fim.toISOString()),
-    // "a receber": entregue e sem acerto ainda, sem filtro de mês — é saldo
-    // em aberto, mesmo critério já usado pro bloco de estoque atual
+    // toda encomenda não cancelada sem acerto ainda — programada, atrasada
+    // ou já entregue —, sem filtro de mês. Usada tanto pro "a receber"
+    // (só entregue) quanto pro "faturamento estimado" (todas)
     supabase
       .from("pedidos")
-      .select("id, valor_total, encomenda_acertos(id)")
+      .select(
+        "id, valor_total, status, encomenda_acertos(id), pedido_itens(produto_id, quantidade)"
+      )
       .eq("tipo_venda", "encomenda")
-      .eq("status", "entregue"),
+      .neq("status", "cancelado"),
     supabase
       .from("producoes")
       .select("quantidade_produzida")
@@ -198,6 +207,7 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
     return {
       vendas: canalVendas,
       custoDosVendidos: canalCusto,
+      lucroBruto: canalVendas - canalCusto,
       margemBruta:
         canalVendas > 0 ? ((canalVendas - canalCusto) / canalVendas) * 100 : 0,
       pedidos: lista.length,
@@ -223,18 +233,27 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
       );
       return soma + custoAcerto;
     }, 0),
-    margemBruta: 0, // preenchido abaixo, depois de vendas/custo calculados
+    lucroBruto: 0, // preenchido abaixo, depois de vendas/custo calculados
+    margemBruta: 0,
     pedidos: acertosLista.length,
   };
+  encomenda.lucroBruto = encomenda.vendas - encomenda.custoDosVendidos;
   encomenda.margemBruta =
     encomenda.vendas > 0
       ? ((encomenda.vendas - encomenda.custoDosVendidos) / encomenda.vendas) * 100
       : 0;
 
-  // a receber: entregue e sem acerto — temAcertoRegistrado trata o embed
-  // vindo como objeto, array ou null (ver comentário na função)
-  const pendentesSemAcerto = (pendentes ?? []).filter(
+  // todas as encomendas não canceladas sem acerto ainda — programada,
+  // atrasada ou entregue. temAcertoRegistrado trata o embed vindo como
+  // objeto, array ou null (ver comentário na função)
+  const encomendasSemAcerto = (pendentes ?? []).filter(
     (p) => !temAcertoRegistrado(p.encomenda_acertos)
+  );
+
+  // "a receber" é só a fatia já entregue — saldo em aberto de verdade,
+  // mesmo critério que sempre teve
+  const pendentesSemAcerto = encomendasSemAcerto.filter(
+    (p) => p.status === "entregue"
   );
   const aReceber = {
     valor: pendentesSemAcerto.reduce((s, p) => s + Number(p.valor_total), 0),
@@ -243,6 +262,18 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
 
   const vendas = varejo.vendas + encomenda.vendas;
   const custoDosVendidos = varejo.custoDosVendidos + encomenda.custoDosVendidos;
+
+  // faturamento estimado: vendas já reconhecidas + TODA encomenda em aberto
+  // (programada, atrasada ou entregue), pelo valor cheio do pedido — visão
+  // geral de pipeline, não só o que já foi entregue
+  const valorEncomendasSemAcerto = encomendasSemAcerto.reduce(
+    (s, p) => s + Number(p.valor_total),
+    0
+  );
+  const custoEncomendasSemAcerto = encomendasSemAcerto.reduce(
+    (s, p) => s + custoDoPedido(p),
+    0
+  );
 
   // um custo recorrente pode contribuir com pedaços de mais de uma parcela
   // se o período cruzar a virada do mês — cada pedaço rateado vira uma linha
@@ -275,6 +306,13 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
 
   const lucro = vendas - custoDosVendidos - custosFixos - perdas;
 
+  const faturamentoEstimado = vendas + valorEncomendasSemAcerto;
+  const lucroEstimado =
+    faturamentoEstimado -
+    (custoDosVendidos + custoEncomendasSemAcerto) -
+    custosFixos -
+    perdas;
+
   // Só cookies: a box não tem estoque próprio, ela é composta na hora do
   // pedido a partir dos cookies. Somá-la contaria o mesmo cookie duas vezes.
   const cookiesEmEstoque = (produtos ?? []).filter(
@@ -298,7 +336,8 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
     varejo,
     encomenda,
     aReceber,
-    faturamentoEstimado: vendas + aReceber.valor,
+    faturamentoEstimado,
+    lucroEstimado,
     pedidos: varejo.pedidos + encomenda.pedidos,
     cookiesProduzidos,
     custoDosVendidos,
