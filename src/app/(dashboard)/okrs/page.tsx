@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { Target, Plus, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { carregarFinanceiro } from "@/lib/financeiro";
-import { mesAtual, competenciaDe } from "@/lib/competencia";
+import { mesAtual, competenciaDe, periodoDoMes } from "@/lib/competencia";
 import { excluirOkr } from "@/lib/actions/okrs";
 import {
   progressoDoResultado,
@@ -33,7 +33,7 @@ export default async function OkrsPage({
       .select("id, objetivo, okr_resultados(id, descricao, metrica, alvo, progresso_manual)")
       .eq("competencia", competenciaDe(mes))
       .order("created_at"),
-    carregarFinanceiro(mes),
+    carregarFinanceiro(periodoDoMes(mes)),
   ]);
 
   const okrsLista = okrs ?? [];

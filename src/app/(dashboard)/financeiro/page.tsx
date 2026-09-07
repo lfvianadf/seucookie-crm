@@ -13,12 +13,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { carregarFinanceiro } from "@/lib/financeiro";
-import { intervaloDoMes } from "@/lib/competencia";
+import { mesAtual, mesDe, periodoDoMes, rotuloPeriodo } from "@/lib/competencia";
 import { excluirPerda } from "@/lib/actions/perdas";
 import { PerdaModal } from "@/components/perda-modal";
-import { mesAtual, rotuloMes } from "@/lib/competencia";
 import { encerrarCustoMensal, excluirCustoMensal } from "@/lib/actions/financeiro";
-import { SeletorMes } from "@/components/seletor-mes";
+import { SeletorPeriodo } from "@/components/seletor-periodo";
 import { CustoMensalModal } from "@/components/custo-mensal-modal";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -35,15 +34,27 @@ function reais(valor: number) {
 export default async function FinanceiroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string }>;
+  searchParams: Promise<{ inicio?: string; fim?: string }>;
 }) {
-  const { mes: mesParam } = await searchParams;
-  const mes = mesParam ?? mesAtual();
-  const { inicio, fim } = intervaloDoMes(mes);
+  const { inicio: inicioParam, fim: fimParam } = await searchParams;
+
+  const periodoPadrao = periodoDoMes(mesAtual());
+  const inicio = inicioParam ? new Date(`${inicioParam}T00:00:00`) : periodoPadrao.inicio;
+  // fim vem da URL como o último dia incluído (inclusivo) — soma 1 dia pra
+  // virar o limite exclusivo usado internamente, mesmo padrão de intervaloDoMes
+  const fim = fimParam
+    ? new Date(new Date(`${fimParam}T00:00:00`).getTime() + 24 * 60 * 60 * 1000)
+    : periodoPadrao.fim;
+  const periodo = { inicio, fim };
+
+  // custo mensal ainda é lançado por mês de competência — período livre é só
+  // leitura; o mês em que o período começa é a referência usada aqui
+  const mesDeReferencia = mesDe(inicio);
+
   const supabase = await createClient();
 
   const [f, { data: perdas }, { data: produtos }] = await Promise.all([
-    carregarFinanceiro(mes),
+    carregarFinanceiro(periodo),
     supabase
       .from("perdas")
       .select("id, quantidade, custo_unitario, motivo, data, produtos(nome)")
@@ -74,7 +85,7 @@ export default async function FinanceiroPage({
               }
             />
             <CustoMensalModal
-              mes={mes}
+              mes={mesDeReferencia}
               trigger={
                 <Button className="w-full sm:w-auto">
                   <Plus className="h-4 w-4" strokeWidth={2} />
@@ -87,9 +98,9 @@ export default async function FinanceiroPage({
       />
 
       <div className="mb-4">
-        {/* SeletorMes usa useSearchParams, que exige um limite de Suspense */}
+        {/* SeletorPeriodo usa useSearchParams, que exige um limite de Suspense */}
         <Suspense fallback={<div className="h-8" />}>
-          <SeletorMes mes={mes} />
+          <SeletorPeriodo periodo={periodo} />
         </Suspense>
       </div>
 
@@ -302,7 +313,7 @@ export default async function FinanceiroPage({
         <div className="mb-4 rounded-xl border border-border bg-white">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="text-sm font-semibold text-berinjela">
-              Perdas de {rotuloMes(mes)}
+              Perdas de {rotuloPeriodo(periodo)}
             </h2>
             <span className="text-xs text-neutro-500">{reais(f.perdas)}</span>
           </div>
@@ -340,7 +351,7 @@ export default async function FinanceiroPage({
       <div className="rounded-xl border border-border bg-white">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-berinjela">
-            Custos de {rotuloMes(mes)}
+            Custos de {rotuloPeriodo(periodo)}
           </h2>
           <span className="text-xs text-neutro-500">
             {reais(f.custosFixos)}
@@ -376,6 +387,13 @@ export default async function FinanceiroPage({
                     {custo.parcela.numero}/{custo.parcela.total}
                   </Badge>
                 )}
+                {custo.fracaoDias < 1 && (
+                  <span title={`Rateado: ${(custo.fracaoDias * 100).toFixed(0)}% de ${reais(custo.valorIntegral)}`}>
+                    <Badge tone="atencao">
+                      {(custo.fracaoDias * 100).toFixed(0)}%
+                    </Badge>
+                  </span>
+                )}
 
                 <span className="shrink-0 text-sm font-semibold text-berinjela">
                   {reais(custo.valor)}
@@ -383,7 +401,7 @@ export default async function FinanceiroPage({
 
                 <div className="flex shrink-0 items-center gap-1 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                   <CustoMensalModal
-                    mes={mes}
+                    mes={mesDeReferencia}
                     custoExistente={custo}
                     trigger={
                       <IconButton
@@ -397,7 +415,7 @@ export default async function FinanceiroPage({
                   {custo.tipo === "recorrente" ? (
                     // encerrar em vez de excluir: para de repetir daqui pra
                     // frente sem apagar os meses em que o custo existiu
-                    <form action={encerrarCustoMensal.bind(null, custo.id, mes)}>
+                    <form action={encerrarCustoMensal.bind(null, custo.id, mesDeReferencia)}>
                       <SubmitButton
                         variant="ghost"
                         size="sm"

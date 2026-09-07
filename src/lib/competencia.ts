@@ -30,6 +30,75 @@ export function intervaloDoMes(mes: string) {
   };
 }
 
+/** Início (inclusivo) e fim (exclusivo) de um intervalo de tempo qualquer. */
+export type Periodo = { inicio: Date; fim: Date };
+
+/** Alias de intervaloDoMes — mesma coisa, nome que combina com Periodo. */
+export function periodoDoMes(mes: string): Periodo {
+  return intervaloDoMes(mes);
+}
+
+export function diasNoMes(ano: number, mes1a12: number) {
+  return new Date(ano, mes1a12, 0).getDate();
+}
+
+/** "1 a 15 de set" (mesmo mês) ou "15 set – 3 out" (cruza meses), pt-BR. */
+export function rotuloPeriodo(periodo: Periodo) {
+  // fim é exclusivo — o último dia do período é o dia anterior
+  const ultimoDia = new Date(periodo.fim.getTime() - 1);
+  const mesmoMes =
+    periodo.inicio.getFullYear() === ultimoDia.getFullYear() &&
+    periodo.inicio.getMonth() === ultimoDia.getMonth();
+
+  if (mesmoMes) {
+    const mesRotulo = ultimoDia.toLocaleDateString("pt-BR", { month: "short" });
+    return `${periodo.inicio.getDate()} a ${ultimoDia.getDate()} de ${mesRotulo}`;
+  }
+
+  const inicioRotulo = periodo.inicio.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "short",
+  });
+  const fimRotulo = ultimoDia.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "short",
+  });
+  return `${inicioRotulo} – ${fimRotulo}`;
+}
+
+/**
+ * Para cada mês-calendário que o período intercepta, quantos dias desse mês
+ * caem dentro do período — a base do rateio proporcional de custo por dia.
+ */
+export function mesesInterceptados(periodo: Periodo) {
+  const resultado: { mes: string; dias: number; diasNoMes: number }[] = [];
+  // cursor no 1º dia do mês do início, avança mês a mês até passar do fim
+  let cursor = new Date(periodo.inicio.getFullYear(), periodo.inicio.getMonth(), 1);
+
+  while (cursor < periodo.fim) {
+    const inicioMes = cursor;
+    const fimMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+
+    const inicioIntersecao = periodo.inicio > inicioMes ? periodo.inicio : inicioMes;
+    const fimIntersecao = periodo.fim < fimMes ? periodo.fim : fimMes;
+
+    const umDiaMs = 24 * 60 * 60 * 1000;
+    const dias = Math.round((fimIntersecao.getTime() - inicioIntersecao.getTime()) / umDiaMs);
+
+    if (dias > 0) {
+      resultado.push({
+        mes: mesDe(inicioMes),
+        dias,
+        diasNoMes: diasNoMes(inicioMes.getFullYear(), inicioMes.getMonth() + 1),
+      });
+    }
+
+    cursor = fimMes;
+  }
+
+  return resultado;
+}
+
 export function mesAnterior(mes: string) {
   const [ano, m] = mes.split("-").map(Number);
   return mesDe(new Date(ano, m - 2, 1));
@@ -97,4 +166,27 @@ export function parcelaDoMes(custo: CustoCompetencia, mes: string) {
   // recorrente: vai até ser encerrado
   if (custo.encerrado_em && mes > custo.encerrado_em.slice(0, 7)) return null;
   return { numero: distancia + 1, total: null };
+}
+
+/**
+ * Fração de um custo que cai dentro do período, rateada proporcionalmente
+ * aos dias de cada mês-calendário que o período intercepta. Um custo
+ * recorrente pode contribuir com pedaços de mais de uma parcela se o
+ * período cruzar a virada do mês — cada pedaço vem como uma entrada própria.
+ */
+export function parcelaNoPeriodo(custo: CustoCompetencia, periodo: Periodo) {
+  const resultado: {
+    mes: string;
+    numero: number;
+    total: number | null;
+    fracaoDias: number;
+  }[] = [];
+
+  for (const { mes, dias, diasNoMes: diasDoMes } of mesesInterceptados(periodo)) {
+    const parcela = parcelaDoMes(custo, mes);
+    if (!parcela) continue;
+    resultado.push({ ...parcela, mes, fracaoDias: dias / diasDoMes });
+  }
+
+  return resultado;
 }

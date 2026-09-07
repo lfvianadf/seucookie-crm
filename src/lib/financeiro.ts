@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { intervaloDoMes, parcelaDoMes } from "@/lib/competencia";
+import { mesDe, parcelaNoPeriodo, type Periodo } from "@/lib/competencia";
 import { calcularCustoReceita } from "@/lib/receita-custo";
 import { temAcertoRegistrado } from "@/lib/encomenda";
 import type { TipoCusto } from "@/lib/types/database";
@@ -59,10 +59,15 @@ export type ResumoFinanceiro = {
   custos: {
     id: string;
     descricao: string;
+    /** já rateado pelos dias do período que caem neste mês-calendário */
     valor: number;
+    /** valor cheio da parcela, antes do rateio — pra UI mostrar "de quanto" */
+    valorIntegral: number;
     tipo: TipoCusto;
     /** "3 de 10" em parcelado; null nos demais */
     parcela: { numero: number; total: number | null } | null;
+    /** 1 quando o período cobre o mês inteiro; menor que 1 se cruzou a virada */
+    fracaoDias: number;
     /** true quando vem repetido de um mês anterior, não lançado neste */
     herdado: boolean;
   }[];
@@ -80,9 +85,9 @@ export type ResumoFinanceiro = {
  * O lucro usa o custo dos vendidos, não as compras — senão o resultado
  * oscilaria conforme o calendário de idas ao mercado.
  */
-export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro> {
+export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanceiro> {
   const supabase = await createClient();
-  const { inicio, fim } = intervaloDoMes(mes);
+  const { inicio, fim } = periodo;
 
   const [
     { data: pedidos },
@@ -239,17 +244,21 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
   const vendas = varejo.vendas + encomenda.vendas;
   const custoDosVendidos = varejo.custoDosVendidos + encomenda.custoDosVendidos;
 
-  const custos = (custosMensais ?? [])
-    .map((c) => ({ custo: c, parcela: parcelaDoMes(c, mes) }))
-    .filter((x) => x.parcela !== null)
-    .map(({ custo: c, parcela }) => ({
+  // um custo recorrente pode contribuir com pedaços de mais de uma parcela
+  // se o período cruzar a virada do mês — cada pedaço rateado vira uma linha
+  const mesDeReferencia = mesDe(periodo.inicio);
+  const custos = (custosMensais ?? []).flatMap((c) =>
+    parcelaNoPeriodo(c, periodo).map((f) => ({
       id: c.id,
       descricao: c.descricao,
-      valor: Number(c.valor),
+      valor: Number(c.valor) * f.fracaoDias,
+      valorIntegral: Number(c.valor),
       tipo: c.tipo,
-      parcela,
-      herdado: c.competencia.slice(0, 7) !== mes,
-    }));
+      parcela: { numero: f.numero, total: f.total },
+      fracaoDias: f.fracaoDias,
+      herdado: f.mes !== mesDeReferencia,
+    }))
+  );
 
   const custosFixos = custos.reduce((s, c) => s + c.valor, 0);
 
