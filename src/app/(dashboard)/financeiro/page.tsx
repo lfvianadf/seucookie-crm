@@ -9,6 +9,7 @@ import {
   CircleSlash,
   TriangleAlert,
   Boxes,
+  Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { carregarFinanceiro } from "@/lib/financeiro";
@@ -200,7 +201,7 @@ export default async function FinanceiroPage({
       </div>
 
       {f.aReceber.pedidos > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <a href="/encomendas" className="block">
             <div className="rounded-xl border border-atencao/40 bg-atencao-bg p-4 transition-shadow duration-150 hover:shadow-md">
               <p className="mb-1 text-xs font-medium text-atencao-text">
@@ -216,6 +217,25 @@ export default async function FinanceiroPage({
               </p>
             </div>
           </a>
+
+          {/* borda tracejada + fundo neutro em vez de uma cor nova: sinaliza
+              "isso não é dinheiro fechado, é projeção" sem inventar um tom
+              fora do sistema (vendas/lucro reais nunca somam este valor) */}
+          <div className="rounded-xl border border-dashed border-border-strong bg-berinjela-50/40 p-4">
+            <div className="mb-1 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-neutro-500" strokeWidth={1.75} />
+              <p className="text-xs font-medium text-neutro-500">
+                Faturamento estimado
+              </p>
+            </div>
+            <p className="text-xl font-semibold text-berinjela">
+              R$ {f.faturamentoEstimado.toFixed(2)}
+            </p>
+            <p className="mt-1 text-xs text-neutro-500">
+              Vendas + encomendas ainda a receber — projeção, não conta como
+              lucro até a encomenda ser acertada
+            </p>
+          </div>
         </div>
       )}
 

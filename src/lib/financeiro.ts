@@ -24,6 +24,13 @@ export type ResumoFinanceiro = {
   encomenda: ResumoCanal;
   /** encomendas entregues e ainda sem acerto — saldo em aberto, não do mês */
   aReceber: { valor: number; pedidos: number };
+  /**
+   * vendas (reconhecidas) + a receber — quanto o mês tende a fechar se toda
+   * encomenda em aberto for acertada pelo valor cheio do pedido. Não é
+   * faturamento de verdade: é a projeção mais otimista, por isso nunca soma
+   * no `vendas`/`lucro` acima.
+   */
+  faturamentoEstimado: number;
   pedidos: number;
   cookiesProduzidos: number;
   /** custo de receita dos produtos vendidos no mês (varejo + encomenda) */
@@ -277,6 +284,7 @@ export async function carregarFinanceiro(mes: string): Promise<ResumoFinanceiro>
     varejo,
     encomenda,
     aReceber,
+    faturamentoEstimado: vendas + aReceber.valor,
     pedidos: varejo.pedidos + encomenda.pedidos,
     cookiesProduzidos,
     custoDosVendidos,
