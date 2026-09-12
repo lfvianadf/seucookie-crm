@@ -15,7 +15,7 @@ import { Modal } from "@/components/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { Select, Textarea } from "@/components/ui/field";
+import { Input, Label, Select, Textarea } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { atualizarPedido } from "@/lib/actions/pedidos";
 import { formatarTelefone } from "@/lib/telefone";
@@ -80,6 +80,15 @@ function formatarDataLonga(iso: string) {
   });
 }
 
+// "2026-09-15" a partir de um ISO, pro value de <input type="date">
+function paraInputDate(iso: string) {
+  const d = new Date(iso);
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
 export function EncomendaDetalheModal({
   encomenda,
   produtos,
@@ -94,6 +103,7 @@ export function EncomendaDetalheModal({
   const [modoEdicao, setModoEdicao] = useState(false);
   const [itensEdicao, setItensEdicao] = useState<ItemEdicao[]>([]);
   const [observacoesEdicao, setObservacoesEdicao] = useState("");
+  const [dataEntregaEdicao, setDataEntregaEdicao] = useState("");
   const [produtoParaAdicionar, setProdutoParaAdicionar] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -108,6 +118,9 @@ export function EncomendaDetalheModal({
     if (!encomenda) return;
     setItensEdicao(encomenda.pedido_itens.map((i) => ({ ...i, key: i.id })));
     setObservacoesEdicao(encomenda.observacoes ?? "");
+    setDataEntregaEdicao(
+      encomenda.data_entrega_prevista ? paraInputDate(encomenda.data_entrega_prevista) : ""
+    );
     setErro(null);
     setModoEdicao(true);
   }
@@ -163,6 +176,10 @@ export function EncomendaDetalheModal({
 
     startTransition(async () => {
       try {
+        const novaDataEntrega = dataEntregaEdicao
+          ? new Date(`${dataEntregaEdicao}T00:00:00`).toISOString()
+          : null;
+
         await atualizarPedido({
           pedidoId: encomenda.id,
           itens: itensEdicao.map((i) => ({
@@ -172,6 +189,7 @@ export function EncomendaDetalheModal({
             preco_unitario: i.preco_unitario,
           })),
           observacoes: observacoesEdicao.trim() || undefined,
+          dataEntregaPrevista: novaDataEntrega,
         });
 
         const novoValorTotal = itensEdicao.reduce(
@@ -188,6 +206,7 @@ export function EncomendaDetalheModal({
             produtos: i.produtos,
           })),
           observacoes: observacoesEdicao.trim() || null,
+          data_entrega_prevista: novaDataEntrega,
           valor_total: novoValorTotal,
         });
         toast("Encomenda atualizada, estoque ajustado");
@@ -219,7 +238,7 @@ export function EncomendaDetalheModal({
               <Badge tone={STATUS_TONE[encomenda.status]}>
                 {STATUS_LABEL[encomenda.status]}
               </Badge>
-              {encomenda.data_entrega_prevista && (
+              {!modoEdicao && encomenda.data_entrega_prevista && (
                 <span className="flex items-center gap-1 text-xs text-neutro-500">
                   <Calendar className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
                   entrega combinada: {formatarDataLonga(encomenda.data_entrega_prevista)}
@@ -254,6 +273,18 @@ export function EncomendaDetalheModal({
               </p>
             )}
           </div>
+
+          {modoEdicao && (
+            <div>
+              <Label htmlFor="encomenda-data-entrega">Data de entrega combinada</Label>
+              <Input
+                id="encomenda-data-entrega"
+                type="date"
+                value={dataEntregaEdicao}
+                onChange={(e) => setDataEntregaEdicao(e.target.value)}
+              />
+            </div>
+          )}
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutro-500">

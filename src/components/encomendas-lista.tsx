@@ -144,6 +144,7 @@ export function EncomendasLista({
               pedido_itens: atualizada.pedido_itens,
               observacoes: atualizada.observacoes,
               valor_total: atualizada.valor_total,
+              data_entrega_prevista: atualizada.data_entrega_prevista,
             }
           : e
       )

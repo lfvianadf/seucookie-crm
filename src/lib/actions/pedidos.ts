@@ -138,8 +138,9 @@ export async function atualizarPedido(params: {
   pedidoId: string;
   itens: (ItemCarrinho & { id?: string })[];
   observacoes?: string;
+  dataEntregaPrevista?: string | null;
 }) {
-  const { pedidoId, itens, observacoes } = params;
+  const { pedidoId, itens, observacoes, dataEntregaPrevista } = params;
 
   if (itens.length === 0) {
     throw new Error("O pedido precisa de ao menos um item.");
@@ -159,9 +160,23 @@ export async function atualizarPedido(params: {
     0
   );
 
+  const dadosAtualizados: {
+    valor_total: number;
+    observacoes: string | null;
+    data_entrega_prevista?: string | null;
+  } = {
+    valor_total: valorTotal,
+    observacoes: observacoes || null,
+  };
+  // undefined = campo não fazia parte da edição (pedido de varejo não tem
+  // data de entrega); null explícito, se algum dia usado, limparia a data
+  if (dataEntregaPrevista !== undefined) {
+    dadosAtualizados.data_entrega_prevista = dataEntregaPrevista;
+  }
+
   const { error: updateError } = await supabase
     .from("pedidos")
-    .update({ valor_total: valorTotal, observacoes: observacoes || null })
+    .update(dadosAtualizados)
     .eq("id", pedidoId);
 
   if (updateError) throw updateError;
