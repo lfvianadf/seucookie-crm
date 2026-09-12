@@ -215,7 +215,9 @@ export async function atualizarPedido(params: {
     if (error) throw error;
   }
 
+  // serve tanto pedido de varejo quanto encomenda — revalida as duas telas
   revalidatePath("/pedidos");
+  revalidatePath("/encomendas");
 }
 
 export async function excluirPedido(id: string) {

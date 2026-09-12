@@ -6,7 +6,10 @@ import { atualizarStatusPedido, excluirPedido } from "@/lib/actions/pedidos";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { AcertoModal } from "@/components/acerto-modal";
-import { EncomendaDetalheModal } from "@/components/encomenda-detalhe-modal";
+import {
+  EncomendaDetalheModal,
+  type EncomendaDetalhe,
+} from "@/components/encomenda-detalhe-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -23,14 +26,17 @@ import {
   SITUACAO_ENCOMENDA_TONE,
   type SituacaoEncomenda,
 } from "@/lib/encomenda";
-import type { PedidoStatus } from "@/lib/types/database";
+import type { PedidoStatus, TipoProduto } from "@/lib/types/database";
 
 type Item = {
+  id: string;
   produto_id: string;
   quantidade: number;
   preco_unitario: number;
   produtos: { nome: string } | null;
 };
+
+type Produto = { id: string; nome: string; preco: number; tipo_produto: TipoProduto };
 
 type AcertoBruto = {
   id: string;
@@ -92,8 +98,10 @@ const FILTRO_LABEL: Record<"todas" | SituacaoEncomenda, string> = {
 
 export function EncomendasLista({
   encomendasIniciais,
+  produtos,
 }: {
   encomendasIniciais: Encomenda[];
+  produtos: Produto[];
 }) {
   const [encomendas, setEncomendas] = useState(encomendasIniciais);
 
@@ -106,7 +114,7 @@ export function EncomendasLista({
   }
 
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState<"todas" | SituacaoEncomenda>("entregue_pendente");
+  const [filtro, setFiltro] = useState<"todas" | SituacaoEncomenda>("todas");
   const [, startTransition] = useTransition();
   const toast = useToast();
 
@@ -125,6 +133,21 @@ export function EncomendasLista({
     return excluirPedido(id).then(() => {
       setEncomendas((prev) => prev.filter((e) => e.id !== id));
     });
+  }
+
+  function atualizar(atualizada: EncomendaDetalhe) {
+    setEncomendas((prev) =>
+      prev.map((e) =>
+        e.id === atualizada.id
+          ? {
+              ...e,
+              pedido_itens: atualizada.pedido_itens,
+              observacoes: atualizada.observacoes,
+              valor_total: atualizada.valor_total,
+            }
+          : e
+      )
+    );
   }
 
   if (encomendas.length === 0) {
@@ -239,7 +262,9 @@ export function EncomendasLista({
               }
             : null
         }
+        produtos={produtos}
         onClose={() => setSelecionadaId(null)}
+        onUpdated={atualizar}
       />
     </div>
   );

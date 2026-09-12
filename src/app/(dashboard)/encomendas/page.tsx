@@ -53,7 +53,7 @@ export default async function EncomendasPage() {
         }
       />
 
-      <EncomendasLista encomendasIniciais={encomendas ?? []} />
+      <EncomendasLista encomendasIniciais={encomendas ?? []} produtos={produtosLista} />
     </div>
   );
 }

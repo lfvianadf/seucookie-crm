@@ -137,6 +137,17 @@ export function NovoPedidoForm({
     });
   }
 
+  function definirQuantidade(produtoId: string, quantidade: number) {
+    setCarrinho((prev) => {
+      if (quantidade <= 0) {
+        const resto = { ...prev };
+        delete resto[produtoId];
+        return resto;
+      }
+      return { ...prev, [produtoId]: quantidade };
+    });
+  }
+
   function ajustarComposicao(cookieId: string, delta: number) {
     setComposicaoEmMontagem((prev) => {
       const atual = (prev[cookieId] ?? 0) + delta;
@@ -551,17 +562,37 @@ export function NovoPedidoForm({
                 key={item.produto.id}
                 className="flex items-center justify-between gap-2 text-sm"
               >
-                <span className="text-berinjela">
-                  {item.quantidade}x {item.produto.nome}
+                <span className="min-w-0 flex-1 truncate text-berinjela">
+                  {item.produto.nome}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => removerItem(item.produto.id)}
-                  aria-label={`Remover ${item.produto.nome}`}
-                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutro-400 transition-colors duration-150 hover:bg-erro-bg hover:text-erro"
-                >
-                  <X className="h-3.5 w-3.5" strokeWidth={1.75} />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => removerItem(item.produto.id)}
+                    aria-label={`Diminuir ${item.produto.nome}`}
+                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border-strong text-neutro-500 transition-colors duration-150 hover:bg-berinjela-50"
+                  >
+                    <Minus className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.quantidade}
+                    onChange={(e) =>
+                      definirQuantidade(item.produto.id, Number(e.target.value))
+                    }
+                    aria-label={`Quantidade de ${item.produto.nome}`}
+                    className="w-14 rounded-md border border-border-strong px-1.5 py-1 text-center text-sm outline-none focus:border-rosa"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => adicionarItem(item.produto)}
+                    aria-label={`Aumentar ${item.produto.nome}`}
+                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border-strong text-neutro-500 transition-colors duration-150 hover:bg-berinjela-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  </button>
+                </div>
               </li>
             ))}
             {caixas.map((caixa) => (
