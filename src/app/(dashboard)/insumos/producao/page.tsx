@@ -121,7 +121,7 @@ export default async function ProducaoPage() {
                     {producao.quantidade_produzida}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                    <div className="flex items-center justify-end gap-1">
                       <ProducaoModal
                         receitas={receitas ?? []}
                         produtos={produtos ?? []}

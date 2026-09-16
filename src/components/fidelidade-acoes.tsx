@@ -122,6 +122,7 @@ export function FidelidadeAcoes({
   }
 
   function resgatar() {
+    if (!window.confirm(`Confirmar a entrega da cortesia para ${nome}?`)) return;
     startTransition(async () => {
       try {
         await registrarResgate(clienteId);
@@ -162,9 +163,9 @@ export function FidelidadeAcoes({
       <button
         type="button"
         onClick={copiarMensagem}
-        className="group flex w-full cursor-pointer gap-2 rounded-lg border border-border bg-berinjela-50/50 px-3 py-2 text-left transition-colors duration-150 hover:bg-berinjela-50"
+        className="group flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border bg-berinjela-50/50 px-3 py-2 text-left transition-colors duration-150 hover:bg-berinjela-50"
       >
-        <span className="min-w-0 flex-1 text-xs leading-relaxed text-neutro-600">
+        <span className="min-w-0 flex-1 truncate text-xs text-neutro-600">
           {mensagem}
         </span>
         <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-neutro-500 group-hover:text-berinjela">

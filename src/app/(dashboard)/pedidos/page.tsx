@@ -111,6 +111,7 @@ export default async function PedidosPage({
             />
             <input
               name="q"
+              aria-label="Buscar pedidos por nome ou telefone"
               defaultValue={q}
               placeholder="Buscar por nome ou telefone"
               className="w-full rounded-lg border border-border-strong bg-white py-2.5 pl-9 pr-3 text-sm text-berinjela outline-none transition-all duration-150 ease-out placeholder:text-berinjela-100 focus:border-rosa focus:shadow-[0_0_0_3px_var(--ring)]"

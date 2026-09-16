@@ -62,8 +62,8 @@ export default async function FidelidadePage() {
       {lista.length ? (
         <div className="space-y-6">
           <Secao titulo="Cortesia disponível" clientes={comCortesia} />
-          <Secao titulo="Quase fechando" clientes={quaseLa} />
-          <Secao titulo="Cartão em andamento" clientes={demais} />
+          <Secao titulo="Quase fechando" clientes={quaseLa} compacto />
+          <Secao titulo="Cartão em andamento" clientes={demais} compacto />
         </div>
       ) : (
         <EmptyState
@@ -85,9 +85,11 @@ type ClienteFidelidade = {
 function Secao({
   titulo,
   clientes,
+  compacto = false,
 }: {
   titulo: string;
   clientes: ClienteFidelidade[];
+  compacto?: boolean;
 }) {
   if (clientes.length === 0) return null;
 
@@ -97,10 +99,10 @@ function Secao({
         <h2 className="text-sm font-semibold text-berinjela">{titulo}</h2>
         <span className="text-xs text-neutro-500">{clientes.length}</span>
       </div>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${compacto ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
         {clientes.map((c) => (
           <div key={c.cliente_id} className="space-y-2">
-            <CartaoFidelidade nome={c.nome} fidelidade={c.fidelidade} />
+            <CartaoFidelidade nome={c.nome} fidelidade={c.fidelidade} compacto={compacto} />
             <FidelidadeAcoes
               clienteId={c.cliente_id}
               nome={c.nome}

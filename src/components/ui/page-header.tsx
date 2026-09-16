@@ -25,7 +25,11 @@ export function PageHeader({
           <p className="mt-0.5 text-sm text-neutro-500">{description}</p>
         )}
       </div>
-      {action && <div className="flex shrink-0 gap-2">{action}</div>}
+      {action && (
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+          {action}
+        </div>
+      )}
     </div>
   );
 }

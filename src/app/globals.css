@@ -19,8 +19,9 @@
   --neutro-100: #f2f1ef;
   --neutro-200: #e4e2df;
   --neutro-300: #cfccc8;
-  --neutro-500: #8a8681;
-  --neutro-700: #5a5652;
+  --neutro-400: #827b7f;
+  --neutro-500: #716a6e;
+  --neutro-700: #514a4e;
 
   --erro: #c8534b;
   --erro-bg: rgba(200, 83, 75, 0.12);
@@ -30,8 +31,8 @@
   --atencao-text: #8f6423;
 
   /* bordas de baixíssimo contraste — separação por espaço/fundo, não linha */
-  --border: rgba(67, 48, 59, 0.08);
-  --border-strong: rgba(67, 48, 59, 0.14);
+  --border: rgba(67, 48, 59, 0.12);
+  --border-strong: rgba(67, 48, 59, 0.22);
 
   /* anel de foco */
   --ring: rgba(200, 107, 133, 0.18);
@@ -54,6 +55,7 @@
   --color-neutro-100: var(--neutro-100);
   --color-neutro-200: var(--neutro-200);
   --color-neutro-300: var(--neutro-300);
+  --color-neutro-400: var(--neutro-400);
   --color-neutro-500: var(--neutro-500);
   --color-neutro-700: var(--neutro-700);
   --color-erro: var(--erro);
@@ -78,6 +80,23 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+}
+
+html {
+  text-size-adjust: 100%;
+}
+
+::placeholder {
+  color: #8f878b;
+  opacity: 1;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {

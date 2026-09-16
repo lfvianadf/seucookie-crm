@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/toast";
 import type { ItemCusto } from "@/lib/receita-custo";
 import type { IngredienteReceita } from "@/lib/actions/receitas";
 import type { UnidadeBase, CategoriaInsumo } from "@/lib/types/database";
+import { formatarMoeda } from "@/lib/formatacao";
 
 type Insumo = {
   id: string;
@@ -79,9 +80,7 @@ export function ReceitaCard({
             Rende {receita.rendimento_cookies} cookies
           </p>
         </div>
-        {/* no mobile essas ações moram dentro do modal de custo — aqui elas
-            dependem de hover, que não existe no toque */}
-        <div className="-mr-1.5 -mt-1.5 hidden shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 md:flex">
+        <div className="-mr-1.5 -mt-1.5 flex shrink-0 items-center gap-0.5">
           <IconButton
             aria-label={`Editar ${receita.nome}`}
             title="Editar"
@@ -154,7 +153,7 @@ export function ReceitaCard({
               Custo/cookie
             </p>
             <p className="text-sm font-semibold text-berinjela">
-              R$ {receita.custoPorCookie.toFixed(2)}
+              {formatarMoeda(receita.custoPorCookie)}
             </p>
           </div>
           <div className="rounded-lg bg-berinjela-50 px-3 py-2">
@@ -179,8 +178,8 @@ export function ReceitaCard({
           </p>
         )}
 
-        <p className="mt-3 text-xs text-neutro-400">
-          Toque pra ver o custo item a item
+        <p className="mt-3 text-xs font-medium text-neutro-500">
+          Ver custo item a item
         </p>
       </ReceitaCustoModal>
 

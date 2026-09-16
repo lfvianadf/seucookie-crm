@@ -26,9 +26,10 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { formatarMoeda } from "@/lib/formatacao";
 
 function reais(valor: number) {
-  return `R$ ${valor.toFixed(2)}`;
+  return formatarMoeda(valor);
 }
 
 export default async function FinanceiroPage({
@@ -235,7 +236,7 @@ export default async function FinanceiroPage({
                 A receber
               </p>
               <p className="text-xl font-semibold text-atencao-text">
-                R$ {f.aReceber.valor.toFixed(2)}
+                {formatarMoeda(f.aReceber.valor)}
               </p>
               <p className="mt-1 text-xs text-atencao-text">
                 {f.aReceber.pedidos} encomenda{f.aReceber.pedidos === 1 ? "" : "s"}{" "}
@@ -261,7 +262,7 @@ export default async function FinanceiroPage({
           <div className="flex items-end gap-4">
             <div>
               <p className="text-xl font-semibold text-berinjela">
-                R$ {f.faturamentoEstimado.toFixed(2)}
+                {formatarMoeda(f.faturamentoEstimado)}
               </p>
               <p className="text-[11px] uppercase tracking-wide text-neutro-500">
                 faturamento
@@ -271,7 +272,7 @@ export default async function FinanceiroPage({
               <p
                 className={`text-xl font-semibold ${f.lucroEstimado < 0 ? "text-erro-text" : "text-salvia-text"}`}
               >
-                R$ {f.lucroEstimado.toFixed(2)}
+                {formatarMoeda(f.lucroEstimado)}
               </p>
               <p className="text-[11px] uppercase tracking-wide text-neutro-500">
                 lucro
@@ -366,7 +367,7 @@ export default async function FinanceiroPage({
                 <span className="shrink-0 text-sm font-semibold text-atencao-text">
                   {reais(Number(perda.custo_unitario) * perda.quantidade)}
                 </span>
-                <div className="shrink-0 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                <div className="shrink-0">
                   <ConfirmDeleteButton
                     itemName={`a perda de ${perda.quantidade}x ${perda.produtos?.nome ?? "cookie"}`}
                     label="Perda"
@@ -433,7 +434,7 @@ export default async function FinanceiroPage({
                   {reais(custo.valor)}
                 </span>
 
-                <div className="flex shrink-0 items-center gap-1 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                <div className="flex shrink-0 items-center gap-1">
                   <CustoMensalModal
                     mes={mesDeReferencia}
                     custoExistente={custo}

@@ -105,7 +105,7 @@ export default async function OkrsPage({
                     >
                       {geral.toFixed(0)}%
                     </span>
-                    <div className="flex items-center gap-1 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                    <div className="flex items-center gap-1">
                       <OkrModal
                         mes={mes}
                         okrExistente={{
