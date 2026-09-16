@@ -13,6 +13,7 @@ import {
 import { ORIGEM_LABEL, ORIGEM_TONE } from "@/lib/pedido-origem";
 import { Badge } from "@/components/ui/badge";
 import type { PedidoOrigem, PedidoStatus, TipoProduto } from "@/lib/types/database";
+import { formatarMoeda } from "@/lib/formatacao";
 
 type Item = {
   id: string;
@@ -63,6 +64,11 @@ export function PedidosKanban({
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [colunaAlvo, setColunaAlvo] = useState<PedidoStatus | null>(null);
   const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState<string | null>(null);
+  const primeiroStatusComPedido =
+    STATUS_ORDEM.find((status) => pedidosIniciais.some((p) => p.status === status)) ??
+    STATUS_ORDEM[0];
+  const [statusMobile, setStatusMobile] =
+    useState<PedidoStatus>(primeiroStatusComPedido);
   const [, startTransition] = useTransition();
   const toast = useToast();
 
@@ -78,9 +84,38 @@ export function PedidosKanban({
   const pedidoSelecionado = pedidos.find((p) => p.id === pedidoSelecionadoId) ?? null;
 
   return (
-    // no mobile as colunas ocupam quase a tela toda e "encaixam" no scroll,
-    // então dá pra deslizar entre status sem enxergar meia coluna cortada.
-    <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:snap-none md:px-0">
+    <>
+      <div
+        className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden"
+        role="tablist"
+        aria-label="Status dos pedidos"
+      >
+        {STATUS_ORDEM.map((status) => {
+          const total = pedidos.filter((p) => p.status === status).length;
+          const ativo = statusMobile === status;
+          return (
+            <button
+              key={status}
+              type="button"
+              role="tab"
+              aria-selected={ativo}
+              onClick={() => setStatusMobile(status)}
+              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors ${
+                ativo
+                  ? "border-berinjela bg-berinjela text-white"
+                  : "border-border-strong bg-white text-berinjela"
+              }`}
+            >
+              {STATUS_LABEL[status]}
+              <span className={ativo ? "text-white/70" : "text-neutro-500"}>
+                {total}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {STATUS_ORDEM.map((status) => {
         const itens = pedidos.filter((p) => p.status === status);
         const isAlvo = colunaAlvo === status;
@@ -100,7 +135,9 @@ export function PedidosKanban({
               setArrastando(null);
               setColunaAlvo(null);
             }}
-            className={`flex w-[85vw] shrink-0 snap-start flex-col rounded-xl border-t-2 bg-berinjela-50/50 transition-shadow duration-150 sm:w-72 ${STATUS_COLUNA_ACCENT[status]} ${
+            className={`min-h-48 flex-col rounded-xl border border-border border-t-2 bg-berinjela-50/50 transition-shadow duration-150 md:flex ${
+              statusMobile === status ? "flex" : "hidden"
+            } ${STATUS_COLUNA_ACCENT[status]} ${
               isAlvo ? "shadow-[0_0_0_2px_var(--rosa)]" : ""
             }`}
           >
@@ -113,7 +150,7 @@ export function PedidosKanban({
               </span>
             </div>
 
-            <div className="flex min-h-16 flex-1 flex-col gap-2 px-2 pb-2">
+            <div className="flex min-h-28 flex-1 flex-col gap-2 px-2 pb-2">
               {itens.map((pedido) => {
                 const resumoItens = pedido.pedido_itens
                   .map((item) => {
@@ -150,9 +187,9 @@ export function PedidosKanban({
                             {ORIGEM_LABEL[pedido.origem]}
                           </Badge>
                         )}
-                      </div>
+      </div>
                       <span className="shrink-0 text-xs font-semibold text-berinjela">
-                        R$ {Number(pedido.valor_total).toFixed(2)}
+                        {formatarMoeda(pedido.valor_total)}
                       </span>
                     </div>
                     {resumoItens && (
@@ -176,6 +213,7 @@ export function PedidosKanban({
           </div>
         );
       })}
+      </div>
 
       <PedidoDetalheModal
         pedido={pedidoSelecionado}
@@ -192,6 +230,6 @@ export function PedidosKanban({
           );
         }}
       />
-    </div>
+    </>
   );
 }

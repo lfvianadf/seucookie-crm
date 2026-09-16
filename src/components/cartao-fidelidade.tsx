@@ -42,17 +42,32 @@ export function CartaoFidelidade({
         )}
       </div>
 
-      {/* o mesmo SVG que vai pro cliente — um desenho só, pra tela e
-          WhatsApp nunca mostrarem coisas diferentes */}
-      <div
-        className={compacto ? "max-w-sm" : ""}
-        dangerouslySetInnerHTML={{
-          __html: cartaoFidelidadeSvg(nome, fidelidade).replace(
-            /width="\d+" height="\d+"/,
-            'width="100%" height="auto"'
-          ),
-        }}
-      />
+      {compacto ? (
+        <div>
+          <div className="mb-2 flex items-center justify-between text-xs text-neutro-500">
+            <span>Progresso</span>
+            <span className="font-semibold text-berinjela">
+              {fidelidade.carimbos} de {META_FIDELIDADE}
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-berinjela-50">
+            <div
+              className="h-full rounded-full bg-rosa"
+              style={{ width: `${Math.min(100, (fidelidade.carimbos / META_FIDELIDADE) * 100)}%` }}
+            />
+          </div>
+        </div>
+      ) : (
+        /* o mesmo SVG que vai pro cliente — um desenho só, pra tela e WhatsApp */
+        <div
+          dangerouslySetInnerHTML={{
+            __html: cartaoFidelidadeSvg(nome, fidelidade).replace(
+              /width="\d+" height="\d+"/,
+              'width="100%" height="auto"'
+            ),
+          }}
+        />
+      )}
 
       <p className="mt-3 text-xs text-neutro-500">
         {fidelidade.saldo} cookie{fidelidade.saldo === 1 ? "" : "s"} comprado

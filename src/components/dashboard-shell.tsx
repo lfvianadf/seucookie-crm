@@ -67,7 +67,7 @@ export function DashboardShell({
       </div>
 
       {/* só o conteúdo rola: a sidebar fica fixa no desktop */}
-      <main className="min-w-0 flex-1 overflow-x-auto px-4 py-4 md:overflow-y-auto md:px-6 md:py-6">
+      <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-4 md:overflow-y-auto md:px-6 md:py-6">
         {children}
       </main>
     </div>

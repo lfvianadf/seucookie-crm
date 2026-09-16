@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { X, AlertCircle, CheckCircle2, Minus, Plus } from "lucide-react";
+import { X, AlertCircle, CheckCircle2, Minus, Plus, Search } from "lucide-react";
 import { criarPedidoManual, type ItemCarrinho } from "@/lib/actions/pedidos";
 import {
   buscarClientePorTelefone,
@@ -60,6 +60,7 @@ export function NovoPedidoForm({
   const [enderecoCliente, setEnderecoCliente] = useState("");
   const [clienteEncontrado, setClienteEncontrado] = useState(false);
   const [observacoes, setObservacoes] = useState("");
+  const [buscaProduto, setBuscaProduto] = useState("");
   const [dataEntregaPrevista, setDataEntregaPrevista] = useState("");
   const [origem, setOrigem] = useState<PedidoOrigem>("manual");
   const [valorLiquidoRecebido, setValorLiquidoRecebido] = useState("");
@@ -296,15 +297,21 @@ export function NovoPedidoForm({
     });
   }
 
+  const produtosFiltrados = produtos.filter((produto) =>
+    produto.nome.toLocaleLowerCase("pt-BR").includes(buscaProduto.trim().toLocaleLowerCase("pt-BR"))
+  );
   const capitulos = Array.from(
-    new Set(produtos.map((p) => p.capitulo ?? "Outros"))
+    new Set(produtosFiltrados.map((p) => p.capitulo ?? "Outros"))
   );
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
         <div className="rounded-xl border border-border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-berinjela">Cliente</h2>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-berinjela">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-berinjela text-xs text-white">1</span>
+            Cliente
+          </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="pedido-telefone">Telefone</Label>
@@ -372,6 +379,7 @@ export function NovoPedidoForm({
 
           {tipoVenda === "varejo" && (
             <div className="mt-4 border-t border-border pt-4">
+              <p className="mb-2 text-xs font-semibold text-neutro-700">Canal da venda</p>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -423,14 +431,29 @@ export function NovoPedidoForm({
         </div>
 
         <div className="rounded-xl border border-border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-berinjela">Itens</h2>
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-berinjela">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-berinjela text-xs text-white">2</span>
+              Itens
+            </h2>
+            <label className="relative block sm:w-64">
+              <span className="sr-only">Buscar produto</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutro-500" strokeWidth={1.75} />
+              <Input
+                value={buscaProduto}
+                onChange={(e) => setBuscaProduto(e.target.value)}
+                placeholder="Buscar produto"
+                className="pl-9"
+              />
+            </label>
+          </div>
           {capitulos.map((capitulo) => (
             <div key={capitulo} className="mb-4 last:mb-0">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutro-500">
                 {capitulo}
               </p>
               <div className="flex flex-wrap gap-2">
-                {produtos
+                {produtosFiltrados
                   .filter((p) => (p.capitulo ?? "Outros") === capitulo)
                   .map((produto) => {
                     const qtd = carrinho[produto.id] ?? 0;
@@ -458,6 +481,11 @@ export function NovoPedidoForm({
           {!produtos.length && (
             <p className="text-sm text-neutro-500">
               Nenhum produto disponível. Cadastre no Cardápio primeiro.
+            </p>
+          )}
+          {produtos.length > 0 && produtosFiltrados.length === 0 && (
+            <p className="rounded-lg bg-berinjela-50 px-3 py-4 text-center text-sm text-neutro-500">
+              Nenhum produto encontrado para “{buscaProduto}”.
             </p>
           )}
 
@@ -550,7 +578,10 @@ export function NovoPedidoForm({
 
       <div>
         <div className="sticky top-0 rounded-xl border border-border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-berinjela">Resumo</h2>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-berinjela">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-berinjela text-xs text-white">3</span>
+            Revisão
+          </h2>
 
           {itensCarrinho.length === 0 && caixas.length === 0 && (
             <p className="text-sm text-neutro-500">Nenhum item selecionado.</p>
@@ -617,13 +648,15 @@ export function NovoPedidoForm({
             ))}
           </ul>
 
-          <Textarea
-            value={observacoes}
-            onChange={(e) => setObservacoes(e.target.value)}
-            placeholder="Observações (opcional)"
-            rows={2}
-            className="mb-4"
-          />
+          <div className="mb-4">
+            <Label htmlFor="pedido-observacoes">Observações (opcional)</Label>
+            <Textarea
+              id="pedido-observacoes"
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={2}
+            />
+          </div>
 
           <div className="mb-4 flex items-center justify-between border-t border-border pt-4">
             <span className="text-sm font-medium text-berinjela">Total</span>
@@ -639,7 +672,12 @@ export function NovoPedidoForm({
             </div>
           )}
 
-          <Button onClick={handleSubmit} loading={isPending} className="w-full">
+          <Button
+            onClick={handleSubmit}
+            loading={isPending}
+            disabled={!nomeCliente.trim() || !telefoneValido(telefone) || total <= 0}
+            className="w-full"
+          >
             {tipoVenda === "encomenda" ? "Criar encomenda" : "Criar pedido"}
           </Button>
         </div>

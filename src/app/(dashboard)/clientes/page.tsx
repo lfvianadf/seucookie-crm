@@ -56,6 +56,7 @@ export default async function ClientesPage({
           />
           <input
             name="q"
+            aria-label="Buscar clientes por telefone ou nome"
             defaultValue={q}
             placeholder="Buscar por telefone ou nome"
             className="w-full rounded-lg border border-border-strong bg-white py-2.5 pl-9 pr-3 text-sm text-berinjela outline-none transition-all duration-150 ease-out placeholder:text-berinjela-100 focus:border-rosa focus:shadow-[0_0_0_3px_var(--ring)]"

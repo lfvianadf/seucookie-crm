@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { calcularCustoReceita } from "@/lib/receita-custo";
 import { ESTOQUE_BAIXO } from "@/lib/estoque";
 import { agruparPorCanal } from "@/lib/encomenda";
+import { formatarMoeda } from "@/lib/formatacao";
 
 export default async function ProdutosPage() {
   const supabase = await createClient();
@@ -142,7 +143,7 @@ export default async function ProdutosPage() {
                           ? `${produto.qtd_cookies_box} cookies`
                           : (produto.capitulo ?? "—")}
                         {!ehBox && produto.acrescimo_box > 0
-                          ? ` · +R$ ${Number(produto.acrescimo_box).toFixed(2)} em box`
+                          ? ` · +${formatarMoeda(produto.acrescimo_box)} em box`
                           : ""}
                         {produto.numero_receita ? ` · nº ${produto.numero_receita}` : ""}
                         {" · "}
@@ -160,7 +161,7 @@ export default async function ProdutosPage() {
                       </p>
                       <div className="mb-2 flex items-center justify-between">
                         <span className="text-sm font-semibold text-berinjela">
-                          R$ {Number(produto.preco).toFixed(2)}
+                          {formatarMoeda(produto.preco)}
                         </span>
                         {ehBox ? (
                           <Badge tone={produto.disponivel ? "salvia" : "neutral"}>
@@ -181,7 +182,7 @@ export default async function ProdutosPage() {
                             margem >= 0 ? "text-salvia-text" : "text-erro-text"
                           }`}
                         >
-                          Margem R$ {margem.toFixed(2)}
+                          Margem {formatarMoeda(margem)}
                           {margemPercent !== null && ` (${margemPercent.toFixed(0)}%)`}
                         </p>
                       )}
