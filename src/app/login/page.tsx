@@ -7,9 +7,9 @@ import { SubmitButton } from "@/components/ui/submit-button";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ erro?: string; authorization_id?: string }>;
 }) {
-  const { erro } = await searchParams;
+  const { erro, authorization_id } = await searchParams;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutro-50 px-4">
@@ -30,6 +30,7 @@ export default async function LoginPage({
           action={login}
           className="rounded-xl border border-border bg-white p-6 shadow-md"
         >
+          {authorization_id && <input type="hidden" name="authorization_id" value={authorization_id} />}
           {erro && (
             <div className="mb-5 flex items-center gap-2 rounded-lg bg-erro-bg px-3 py-2.5 text-sm text-erro-text">
               <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} />

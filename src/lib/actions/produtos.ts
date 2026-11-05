@@ -139,6 +139,7 @@ export async function criarProduto(formData: FormData) {
   await sincronizarBoxItens(supabase, produto.id, tipoProduto, canal, formData);
 
   revalidatePath("/produtos");
+  return produto;
 }
 
 export async function atualizarProduto(id: string, formData: FormData) {
@@ -180,7 +181,7 @@ export async function atualizarProduto(id: string, formData: FormData) {
       capitulo,
       descricao,
       disponivel: disponivelFinal,
-      qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque,
+      ...(qtdEstoqueRaw ? { qtd_estoque: Number.isNaN(qtdEstoque) ? 0 : qtdEstoque } : {}),
       tipo_produto: tipoProduto,
       canal,
       qtd_cookies_box:

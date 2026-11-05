@@ -16,7 +16,7 @@ export async function registrarProducao(params: {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("registrar_producao", {
+  const { data: producaoId, error } = await supabase.rpc("registrar_producao", {
     p_receita_id: receitaId,
     p_produto_id: produtoId,
     p_quantidade: quantidade,
@@ -28,6 +28,7 @@ export async function registrarProducao(params: {
   if (error) throw new Error(error.message);
 
   revalidarInsumos();
+  return { id: producaoId };
 }
 
 export async function atualizarProducao(params: {

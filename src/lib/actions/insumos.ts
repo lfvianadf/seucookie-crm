@@ -16,9 +16,11 @@ export async function criarInsumo(formData: FormData) {
 
   // nasce zerado: estoque e custo passam a existir só quando houver uma
   // entrada de compra, que é o que define o preço de cada lote
-  await supabase.from("insumos").insert({ nome, unidade_base, categoria });
+  const { data, error } = await supabase.from("insumos").insert({ nome, unidade_base, categoria }).select("id").single();
+  if (error) throw error;
 
   revalidatePath("/insumos");
+  return data;
 }
 
 export async function atualizarInsumo(id: string, formData: FormData) {
@@ -33,10 +35,11 @@ export async function atualizarInsumo(id: string, formData: FormData) {
 
   // só identidade: estoque e custo são derivados dos lotes e não podem ser
   // sobrescritos aqui, senão uma edição de nome zeraria o custo real
-  await supabase
+  const { error } = await supabase
     .from("insumos")
     .update({ nome, unidade_base, categoria })
     .eq("id", id);
+  if (error) throw error;
 
   revalidatePath("/insumos");
 }
@@ -66,7 +69,7 @@ export async function registrarEntradaInsumo(params: {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("registrar_entrada_insumo", {
+  const { data: loteId, error } = await supabase.rpc("registrar_entrada_insumo", {
     p_insumo_id: insumoId,
     p_quantidade: quantidade,
     p_valor_pago: valorPago,
@@ -78,6 +81,7 @@ export async function registrarEntradaInsumo(params: {
   revalidatePath("/insumos");
   revalidatePath(`/insumos/${insumoId}`);
   revalidatePath("/insumos/receitas");
+  return { id: loteId };
 }
 
 /**
