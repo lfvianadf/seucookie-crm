@@ -4,6 +4,10 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === "/api/mcp" || pathname === "/.well-known/oauth-protected-resource") {
+    return NextResponse.next({ request });
+  }
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -38,12 +42,16 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    if (pathname === "/oauth/consent") {
+      url.searchParams.set("authorization_id", request.nextUrl.searchParams.get("authorization_id") ?? "");
+    }
     return NextResponse.redirect(url);
   }
 
   if (user && request.nextUrl.pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = request.nextUrl.searchParams.has("authorization_id") ? "/oauth/consent" : "/";
     return NextResponse.redirect(url);
   }
 

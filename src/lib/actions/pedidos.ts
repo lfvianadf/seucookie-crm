@@ -49,57 +49,15 @@ export async function criarPedidoManual(params: {
     clienteEndereco
   );
 
-  const valorTotal = itens.reduce(
-    (soma, item) => soma + item.quantidade * item.preco_unitario,
-    0
-  );
-
-  const { data: pedido, error } = await supabase
-    .from("pedidos")
-    .insert({
-      cliente_id: cliente.id,
-      origem,
-      status: "novo",
-      valor_total: valorTotal,
-      valor_liquido_recebido: valorLiquidoRecebido ?? null,
-      observacoes: observacoes || null,
-      tipo_venda: tipoVenda,
-      data_entrega_prevista: dataEntregaPrevista || null,
-    })
-    .select()
-    .single();
-
+  const { data: pedidoId, error } = await supabase.rpc("criar_pedido_crm", {
+    p_cliente_id: cliente.id, p_itens: itens,
+    p_observacoes: observacoes ?? null, p_tipo_venda: tipoVenda,
+    p_data_entrega: dataEntregaPrevista ?? null, p_origem: origem,
+    p_valor_liquido: valorLiquidoRecebido ?? null,
+  });
   if (error) throw error;
-
-  // insere um a um (não em lote) porque itens de box precisam do id do
-  // pedido_item recém-criado pra gravar a composição em seguida.
-  for (const item of itens) {
-    const { data: pedidoItem, error: itemError } = await supabase
-      .from("pedido_itens")
-      .insert({
-        pedido_id: pedido.id,
-        produto_id: item.produto_id,
-        quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario,
-      })
-      .select("id")
-      .single();
-
-    if (itemError) throw itemError;
-
-    if (item.composicao && item.composicao.length > 0) {
-      const { error: composicaoError } = await supabase
-        .from("pedido_item_composicao")
-        .insert(
-          item.composicao.map((c) => ({
-            pedido_item_id: pedidoItem.id,
-            cookie_produto_id: c.cookieProdutoId,
-            quantidade: c.quantidade,
-          }))
-        );
-      if (composicaoError) throw composicaoError;
-    }
-  }
+  const { data: pedido, error: leituraError } = await supabase.from("pedidos").select().eq("id", pedidoId).single();
+  if (leituraError) throw new Error(`Pedido ${pedidoId} criado, mas não foi possível ler os detalhes. Consulte-o antes de repetir.`);
 
   revalidatePath(tipoVenda === "encomenda" ? "/encomendas" : "/pedidos");
   revalidatePath("/");
@@ -124,12 +82,13 @@ export async function criarEncomenda(params: {
 
 export async function atualizarStatusPedido(id: string, status: PedidoStatus) {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("pedidos")
     .update({ status })
     .eq("id", id)
     .select("tipo_venda")
     .single();
+  if (error) throw error;
   revalidatePath(data?.tipo_venda === "encomenda" ? "/encomendas" : "/pedidos");
   revalidatePath("/");
 }

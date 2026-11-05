@@ -762,6 +762,19 @@ export interface Database {
       };
     };
     Functions: {
+      salvar_receita_crm: {
+        Args: { p_id: string | null; p_nome: string; p_rendimento: number; p_itens: { insumo_id: string; quantidade: number }[] };
+        Returns: string;
+      };
+      criar_pedido_crm: {
+        Args: {
+          p_cliente_id: string;
+          p_itens: { produto_id: string; quantidade: number; preco_unitario: number; composicao?: { cookieProdutoId: string; quantidade: number }[] }[];
+          p_observacoes: string | null; p_tipo_venda: PedidoTipoVenda;
+          p_data_entrega: string | null; p_origem: PedidoOrigem; p_valor_liquido: number | null;
+        };
+        Returns: string;
+      };
       registrar_producao: {
         Args: {
           p_receita_id: string;

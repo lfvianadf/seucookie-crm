@@ -17,25 +17,12 @@ export async function criarReceita(params: {
 
   const supabase = await createClient();
 
-  const { data: receita, error } = await supabase
-    .from("receitas")
-    .insert({ nome, rendimento_cookies })
-    .select()
-    .single();
-
+  const { data, error } = await supabase.rpc("salvar_receita_crm", {
+    p_id: null, p_nome: nome, p_rendimento: rendimento_cookies, p_itens: itens,
+  });
   if (error) throw error;
-
-  const { error: itensError } = await supabase.from("receita_insumos").insert(
-    itens.map((item) => ({
-      receita_id: receita.id,
-      insumo_id: item.insumo_id,
-      quantidade: item.quantidade,
-    }))
-  );
-
-  if (itensError) throw itensError;
-
   revalidatePath("/insumos/receitas");
+  return { id: data };
 }
 
 export async function atualizarReceita(params: {
@@ -44,35 +31,14 @@ export async function atualizarReceita(params: {
   rendimento_cookies: number;
   itens: IngredienteReceita[];
 }) {
-  const { id, nome, rendimento_cookies, itens } = params;
-  if (!nome || !rendimento_cookies || itens.length === 0) {
-    throw new Error("Nome, rendimento e ao menos um insumo são obrigatórios.");
-  }
-
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("receitas")
-    .update({ nome, rendimento_cookies })
-    .eq("id", id);
+  const { data, error } = await supabase.rpc("salvar_receita_crm", {
+    p_id: params.id, p_nome: params.nome,
+    p_rendimento: params.rendimento_cookies, p_itens: params.itens,
+  });
   if (error) throw error;
-
-  const { error: deleteError } = await supabase
-    .from("receita_insumos")
-    .delete()
-    .eq("receita_id", id);
-  if (deleteError) throw deleteError;
-
-  const { error: itensError } = await supabase.from("receita_insumos").insert(
-    itens.map((item) => ({
-      receita_id: id,
-      insumo_id: item.insumo_id,
-      quantidade: item.quantidade,
-    }))
-  );
-  if (itensError) throw itensError;
-
   revalidatePath("/insumos/receitas");
+  return { id: data };
 }
 
 /**
