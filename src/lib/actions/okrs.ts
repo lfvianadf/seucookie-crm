@@ -43,6 +43,7 @@ export async function criarOkr(params: {
 
   if (krError) throw new Error(krError.message);
   revalidatePath("/okrs");
+  return { id: okr.id };
 }
 
 export async function atualizarOkr(params: {
@@ -68,7 +69,7 @@ export async function atualizarOkr(params: {
   const { data: atuais } = await supabase
     .from("okr_resultados")
     .select("id")
-    .eq("okr_id", id);
+    .eq("okr_id", id).throwOnError();
 
   const idsMantidos = new Set(resultados.filter((r) => r.id).map((r) => r.id));
   const remover = (atuais ?? []).filter((a) => !idsMantidos.has(a.id));
@@ -77,7 +78,7 @@ export async function atualizarOkr(params: {
     await supabase
       .from("okr_resultados")
       .delete()
-      .in("id", remover.map((r) => r.id));
+      .in("id", remover.map((r) => r.id)).throwOnError();
   }
 
   for (const resultado of resultados) {
@@ -89,14 +90,14 @@ export async function atualizarOkr(params: {
           metrica: resultado.metrica,
           alvo: resultado.alvo,
         })
-        .eq("id", resultado.id);
+        .eq("id", resultado.id).throwOnError();
     } else {
       await supabase.from("okr_resultados").insert({
         okr_id: id,
         descricao: resultado.descricao.trim(),
         metrica: resultado.metrica,
         alvo: resultado.alvo,
-      });
+      }).throwOnError();
     }
   }
 

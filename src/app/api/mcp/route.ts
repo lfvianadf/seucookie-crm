@@ -2,13 +2,14 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { authenticateMcp } from "@/lib/mcp/auth";
 import { createMcpServer } from "@/lib/mcp/server";
 import { supabaseContext } from "@/lib/supabase/context";
+import { MAX_MCP_BODY_BYTES } from "@/lib/mcp/arquivos";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const client = await authenticateMcp(request);
   if (client instanceof Response) return client;
-  if (Number(request.headers.get("content-length")) > 256_000) {
+  if (Number(request.headers.get("content-length")) > MAX_MCP_BODY_BYTES) {
     return new Response("Requisição muito grande.", { status: 413 });
   }
   const reader = request.body?.getReader();
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.length;
-      if (size > 256_000) {
+      if (size > MAX_MCP_BODY_BYTES) {
         await reader.cancel();
         return new Response("Requisição muito grande.", { status: 413 });
       }

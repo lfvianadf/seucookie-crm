@@ -7,6 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 const NOTAS_BUCKET = "notas-fiscais";
 
 export async function criarNotaFiscal(formData: FormData) {
+  const nota = await registrarNotaFiscal(formData);
+  redirect(`/insumos/notas/${nota.id}`);
+}
+
+export async function registrarNotaFiscal(formData: FormData) {
   const supabase = await createClient();
 
   const foto = formData.get("foto");
@@ -52,13 +57,16 @@ export async function criarNotaFiscal(formData: FormData) {
   }
 
   revalidatePath("/insumos/notas");
-  redirect(`/insumos/notas/${nota.id}`);
+  return { id: nota.id, processamento_pendente: !!fnError };
 }
 
 export async function reprocessarNota(notaId: string) {
   const supabase = await createClient();
-  await supabase.from("notas_fiscais").update({ status: "processando" }).eq("id", notaId);
-  await supabase.functions.invoke("parse-nota-fiscal", { body: { notaId } });
+  const { data: validados } = await supabase.from("nota_itens").select("id").eq("nota_id", notaId).eq("validado", true).limit(1).throwOnError();
+  if (validados.length) throw new Error("A nota já tem compras validadas. Não é possível reprocessá-la e duplicar entradas.");
+  await supabase.from("notas_fiscais").update({ status: "processando" }).eq("id", notaId).throwOnError();
+  const { error } = await supabase.functions.invoke("parse-nota-fiscal", { body: { notaId } });
+  if (error) throw new Error(error.message);
   revalidatePath(`/insumos/notas/${notaId}`);
 }
 
@@ -71,7 +79,7 @@ async function recalcularTotalNota(
   const { data: todosItens } = await supabase
     .from("nota_itens")
     .select("valor, validado")
-    .eq("nota_id", notaId);
+    .eq("nota_id", notaId).throwOnError();
 
   const valorTotalNota = (todosItens ?? []).reduce(
     (soma, i) => soma + Number(i.valor),
@@ -87,13 +95,15 @@ async function recalcularTotalNota(
         ? { status: "confirmada" as const }
         : {}),
     })
-    .eq("id", notaId);
+    .eq("id", notaId).throwOnError();
 }
 
 export async function excluirItemNota(itemId: string, notaId: string) {
   const supabase = await createClient();
 
-  const { error } = await supabase.from("nota_itens").delete().eq("id", itemId);
+  const { data: item } = await supabase.from("nota_itens").select("validado").eq("id", itemId).eq("nota_id", notaId).single().throwOnError();
+  if (item.validado) throw new Error("Item já validado. Corrija a compra pelo lote correspondente para preservar o estoque.");
+  const { error } = await supabase.from("nota_itens").delete().eq("id", itemId).eq("nota_id", notaId);
   if (error) throw error;
 
   await recalcularTotalNota(supabase, notaId);
@@ -112,6 +122,11 @@ export async function validarItemNota(params: {
 }) {
   const { itemId, notaId, insumoId, quantidade, valor, textoOriginal } = params;
   const supabase = await createClient();
+  const { data: item } = await supabase.from("nota_itens").select("validado").eq("id", itemId).eq("nota_id", notaId).single().throwOnError();
+  if (item.validado) throw new Error("Esse item já foi validado; não registre a compra novamente.");
+
+  if (!Number.isFinite(quantidade) || quantidade <= 0 || !Number.isFinite(valor) || valor < 0) throw new Error("Quantidade ou valor inválido.");
+  const { data: nota } = await supabase.from("notas_fiscais").select("data_compra").eq("id", notaId).single().throwOnError();
 
   const { data: insumo, error: insumoError } = await supabase
     .from("insumos")
@@ -132,7 +147,7 @@ export async function validarItemNota(params: {
     p_insumo_id: insumoId,
     p_quantidade: quantidade / fator,
     p_valor_pago: valor,
-    p_data: null,
+    p_data: `${nota.data_compra}T12:00:00-03:00`,
   });
 
   if (loteError) throw new Error(loteError.message);
@@ -140,7 +155,7 @@ export async function validarItemNota(params: {
   const { error: updateItemError } = await supabase
     .from("nota_itens")
     .update({ insumo_id: insumoId, quantidade, valor, validado: true })
-    .eq("id", itemId);
+    .eq("id", itemId).eq("nota_id", notaId);
 
   if (updateItemError) throw updateItemError;
 
@@ -151,7 +166,7 @@ export async function validarItemNota(params: {
     .upsert(
       { insumo_id: insumoId, texto_nota: textoOriginal },
       { onConflict: "texto_nota" }
-    );
+    ).throwOnError();
 
   // o total da nota é sempre a soma dos itens — nunca digitado, pra não
   // divergir do que foi realmente lido/corrigido.

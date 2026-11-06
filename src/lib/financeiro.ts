@@ -95,19 +95,7 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
   const supabase = await createClient();
   const { inicio, fim } = periodo;
 
-  const [
-    { data: pedidos },
-    { data: acertosDoMes },
-    { data: pendentes },
-    { data: producoes },
-    { data: lotes },
-    { data: perdasDoMes },
-    { data: custosMensais },
-    { data: produtos },
-    { data: receitas },
-    { data: receitaInsumos },
-    { data: insumos },
-  ] = await Promise.all([
+  const consultas = await Promise.all([
     // varejo continua por data_pedido; encomenda vem das outras duas
     // queries (acerto do mês, e o saldo pendente sem filtro de mês)
     supabase
@@ -159,6 +147,23 @@ export async function carregarFinanceiro(periodo: Periodo): Promise<ResumoFinanc
     supabase.from("receita_insumos").select("*"),
     supabase.from("insumos").select("*"),
   ]);
+  for (const consulta of consultas) {
+    if (consulta.error) throw new Error(consulta.error.message);
+  }
+  const [
+    { data: pedidos },
+    { data: acertosDoMes },
+    { data: pendentes },
+    { data: producoes },
+    { data: lotes },
+    { data: perdasDoMes },
+    { data: custosMensais },
+    { data: produtos },
+    { data: receitas },
+    { data: receitaInsumos },
+    { data: insumos },
+  ] = consultas;
+
 
   const varejoLista = pedidos ?? [];
 

@@ -34,6 +34,17 @@ async function uploadFoto(
 // recalcula disponivel = soma do estoque dos cookies selecionados > 0 — o
 // checkbox "Disponível" vem desabilitado pra box no formulário, então o
 // valor que chegaria pelo form seria sempre falso; isso aqui é que manda.
+async function validarCookiesBox(supabase: Awaited<ReturnType<typeof createClient>>, formData: FormData) {
+  if (formData.get("tipo_produto") !== "box") return;
+  const ids = formData.getAll("box_cookies").map(String).filter(Boolean);
+  if (new Set(ids).size !== ids.length) throw new Error("O cardápio da box contém cookies repetidos.");
+  if (!ids.length) return;
+  const { data } = await supabase.from("produtos").select("id, tipo_produto").in("id", ids).throwOnError();
+  if (data.length !== ids.length || data.some((p) => p.tipo_produto !== "cookie")) {
+    throw new Error("O cardápio da box deve conter somente cookies cadastrados.");
+  }
+}
+
 async function sincronizarBoxItens(
   supabase: Awaited<ReturnType<typeof createClient>>,
   produtoId: string,
@@ -41,7 +52,7 @@ async function sincronizarBoxItens(
   canal: ProdutoCanal,
   formData: FormData
 ) {
-  await supabase.from("produto_box_itens").delete().eq("box_id", produtoId);
+  await supabase.from("produto_box_itens").delete().eq("box_id", produtoId).throwOnError();
 
   if (tipoProduto !== "box") return;
 
@@ -49,32 +60,32 @@ async function sincronizarBoxItens(
   // regra de disponivelFinal acima, repetida aqui porque este helper roda
   // depois e sobrescreveria disponivel de volta pra true
   if (canal === "encomenda") {
-    await supabase.from("produtos").update({ disponivel: false }).eq("id", produtoId);
+    await supabase.from("produtos").update({ disponivel: false }).eq("id", produtoId).throwOnError();
   }
 
   const cookieIds = formData.getAll("box_cookies").map(String).filter(Boolean);
   if (cookieIds.length === 0) {
-    await supabase.from("produtos").update({ disponivel: false }).eq("id", produtoId);
+    await supabase.from("produtos").update({ disponivel: false }).eq("id", produtoId).throwOnError();
     return;
   }
 
   await supabase.from("produto_box_itens").insert(
     cookieIds.map((cookieId) => ({ box_id: produtoId, cookie_id: cookieId }))
-  );
+  ).throwOnError();
 
   if (canal === "encomenda") return;
 
   const { data: cookies } = await supabase
     .from("produtos")
     .select("qtd_estoque")
-    .in("id", cookieIds);
+    .in("id", cookieIds).throwOnError();
 
   const somaEstoque = (cookies ?? []).reduce((s, c) => s + c.qtd_estoque, 0);
 
   await supabase
     .from("produtos")
     .update({ disponivel: somaEstoque > 0 })
-    .eq("id", produtoId);
+    .eq("id", produtoId).throwOnError();
 }
 
 export async function criarProduto(formData: FormData) {
@@ -106,6 +117,7 @@ export async function criarProduto(formData: FormData) {
 
   if (!nome || Number.isNaN(preco)) return;
 
+  await validarCookiesBox(supabase, formData);
   const foto_url = await uploadFoto(supabase, formData.get("foto"));
 
   const { data: produto, error } = await supabase
@@ -171,6 +183,7 @@ export async function atualizarProduto(id: string, formData: FormData) {
 
   if (!nome || Number.isNaN(preco)) return;
 
+  await validarCookiesBox(supabase, formData);
   const foto_url = await uploadFoto(supabase, formData.get("foto"));
 
   const { error } = await supabase
@@ -207,12 +220,13 @@ export async function atualizarProduto(id: string, formData: FormData) {
 
 export async function alternarDisponibilidade(id: string, disponivel: boolean) {
   const supabase = await createClient();
-  await supabase.from("produtos").update({ disponivel }).eq("id", id);
+  const { data: produto } = await supabase.from("produtos").select("canal").eq("id", id).single().throwOnError();
+  await supabase.from("produtos").update({ disponivel: produto.canal === "encomenda" ? false : disponivel }).eq("id", id).throwOnError();
   revalidatePath("/produtos");
 }
 
 export async function excluirProduto(id: string) {
   const supabase = await createClient();
-  await supabase.from("produtos").delete().eq("id", id);
+  await supabase.from("produtos").delete().eq("id", id).throwOnError();
   revalidatePath("/produtos");
 }

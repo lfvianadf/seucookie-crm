@@ -6,20 +6,29 @@ O MCP chama as mesmas actions do CRM, com um cliente Supabase isolado por requis
 
 ## Ferramentas disponíveis
 
-| Ferramenta | Operação |
+O servidor oferece 50 ferramentas e reutiliza as ações e os cálculos das telas do CRM.
+
+| Área | Operações |
 | --- | --- |
-| `consultar` | Produtos, estoque, insumos, receitas e ingredientes, produção, pedidos e itens, clientes e lotes; filtros e paginação |
-| `cadastrar_produto` / `atualizar_produto` | Cookies, preços, descrição e vínculo com receita; edição preserva estoque |
-| `cadastrar_insumo` / `atualizar_insumo` | Identidade do insumo; estoque e custo vêm dos lotes |
-| `cadastrar_receita` / `atualizar_receita` | Fórmula completa e rendimento, em uma transação |
-| `registrar_compra_insumo` | Entrada de compra, lote e recálculo de custo |
-| `registrar_producao` / `atualizar_producao` | Produção com consumo FIFO dos insumos e atualização dos cookies |
-| `cadastrar_pedido` | Pedido ou encomenda, com cookies ou boxes e baixa de estoque, em uma transação |
-| `atualizar_status_pedido` | Etapa do pedido ou encomenda |
+| Dashboard | Indicadores e registros recentes |
+| Produtos | Criar, editar, excluir, foto, disponibilidade, estoque inicial e cardápio de cookies das boxes |
+| Insumos e compras | Criar, editar e excluir insumos; registrar, corrigir e excluir lotes, com recálculo de estoque/custo |
+| Receitas | Criar, editar, duplicar, excluir; consultar custo, gargalo e capacidade de produção |
+| Produções | Registrar, corrigir e estornar fornadas com os movimentos FIFO do banco |
+| Pedidos e encomendas | Criar, editar itens/observações/data, excluir e alternar entre os seis estados; registrar e desfazer acertos e destinar sobras |
+| Clientes | Criar, editar, excluir quando não houver histórico e consultar pedidos vinculados |
+| Fidelidade | Consultar saldo, gerar cartão PNG e preparar texto/link de WhatsApp, registrar/desfazer cortesia; não envia mensagens |
+| Financeiro | Resumo por mês ou intervalo, custos únicos/recorrentes/parcelados, encerramento de recorrência, perdas e estornos |
+| Metas | Criar, editar e excluir objetivos/resultados-chave, atualizar progresso manual e consultar indicadores automáticos |
+| Notas fiscais | Enviar foto para leitura, consultar/reprocessar, validar itens como compras, excluir itens pendentes e acessar foto por link privado de 5 minutos |
 
-Ingredientes e estoque de insumos usam **g/ml/un**. Compras usam **kg/L/un**, com o **valor total pago em reais**. Produção informa número de cookies, não número de receitas. Datas exigem ISO 8601 com fuso.
+`consultar` lista registros e detalhes de 20 entidades, com UUID, busca, datas, vínculos, tipo de venda, status e paginação. Os resumos `consultar_financeiro`, `consultar_okrs`, `consultar_dashboard` e `consultar_custo_receita` preservam os cálculos atuais do sistema. Não implementam uma nova regra de precificação ou de custo histórico.
 
-As ferramentas resolvem cadastros por UUID; o Dot deve consultar os nomes antes de gravar. Não há exclusões, upload de fotos, cadastro/edição de boxes, edição de itens de pedidos, financeiro ou notas fiscais no MCP. Essas operações continuam disponíveis pela interface. Cancelar um pedido altera o status, seguindo o comportamento atual do CRM; não estorna estoque automaticamente.
+Ingredientes e estoque de insumos usam **g/ml/un**. Compras usam **kg/L/un**, com o **valor total pago em reais**. Produção informa número de cookies, não número de receitas. Datas exigem ISO 8601 com fuso. Fotos aceitam JPEG, PNG, WebP ou GIF em base64 puro, até **2 MB**; o conteúdo e o tamanho são validados e não há download de URLs externas.
+
+As ferramentas resolvem cadastros por UUID; consulte nomes antes de gravar. Edições parciais preservam campos omitidos; receitas, itens de pedidos e resultados-chave exigem a lista completa. A edição de pedidos preserva composições de boxes existentes, seguindo a interface. Cancelar altera o status e não estorna estoque automaticamente. Desfaça o acerto antes de excluir uma encomenda acertada. As exclusões continuam sujeitas aos vínculos e validações do banco.
+
+A aba **Entregas** ainda não possui operações implementadas na interface; o MCP permite apenas consultar sua tabela. Rotinas agendadas ficam a cargo do usuário/cliente MCP.
 
 ## Ativação em produção
 
@@ -58,7 +67,7 @@ npm run test:mcp
 
 Nesta implementação, o build também foi validado com `npm run build -- --webpack`: o Turbopack foi impedido pelo ambiente de abrir sua porta interna de compilação. O Next.js e o eslint-config-next foram atualizados de 16.2.10 para 16.4.5 para corrigir alertas de segurança. A auditoria final com `npm audit --omit=dev` não apontou vulnerabilidades de produção; ainda há alertas em ferramentas de desenvolvimento fora do escopo desta integração.
 
-O teste HTTP inicia o Next em uma porta livre e simula o Supabase localmente: autenticação inválida/expirada, usuário e client ID não autorizados, origem inválida, limite de corpo, descoberta pelo SDK oficial, duas contas em paralelo, validação de entradas, produção e edição sem sobrescrever estoque. Nenhum dado real é consultado ou alterado.
+Os testes de imagens validam tamanho, formato, base64 e nomes. O teste HTTP inicia o Next em uma porta livre e simula o Supabase localmente: autenticação inválida/expirada, usuário e client ID não autorizados, origem inválida, limite de corpo, descoberta pelo SDK oficial, duas contas em paralelo, validação de entradas, produção, edição sem sobrescrever estoque, seis estados, lotes, financeiro, metas, cartão PNG, leitura/validação de notas e recusas de exclusão. Nenhum dado real é consultado ou alterado.
 
 Para testar as transações em um PostgreSQL temporário sem acrescentar dependências ao app:
 
@@ -69,7 +78,7 @@ PGLITE_MODULE=/tmp/seucookie-mcp-check/node_modules/@electric-sql/pglite/dist/in
 
 Esse teste carrega o schema e as migrações relevantes, verificando rollback de receitas, pedidos, composição de boxes, falta de estoque e bloqueio de chamadas anônimas. Não substitui testar OAuth no Supabase hospedado nem o plugin conectado ao Dot. O teste não simula concorrência real de transações em PostgreSQL.
 
-Não há idempotência persistente para repetição de chamadas. Depois de um timeout, consulte os registros antes de repetir uma gravação. O servidor não repete gravações automaticamente.
+Algumas ações herdadas da interface fazem mais de uma gravação, sem transação global. Não paralelize alterações no mesmo registro. Não há idempotência persistente para repetição de chamadas. Depois de um timeout, consulte os registros antes de repetir uma gravação. O servidor não repete gravações automaticamente.
 
 ## Referências
 
