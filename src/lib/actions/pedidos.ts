@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { temAcertoRegistrado } from "@/lib/encomenda";
 import { encontrarOuCriarCliente } from "@/lib/actions/clientes";
 import type { PedidoOrigem, PedidoStatus, PedidoTipoVenda } from "@/lib/types/database";
 
@@ -105,6 +106,11 @@ export async function atualizarPedido(params: {
     throw new Error("O pedido precisa de ao menos um item.");
   }
 
+  for (const item of itens) {
+    if (!Number.isInteger(item.quantidade) || item.quantidade <= 0 || !Number.isFinite(item.preco_unitario) || item.preco_unitario < 0) {
+      throw new Error("Quantidade ou preço inválido.");
+    }
+  }
   const supabase = await createClient();
 
   const { data: itensAtuais, error: itensAtuaisError } = await supabase
@@ -113,6 +119,13 @@ export async function atualizarPedido(params: {
     .eq("pedido_id", pedidoId);
 
   if (itensAtuaisError) throw itensAtuaisError;
+
+  const idsRecebidos = itens.flatMap((item) => item.id ? [item.id] : []);
+  if (new Set(idsRecebidos).size !== idsRecebidos.length) throw new Error("Um item não pode aparecer duas vezes na edição.");
+  for (const item of itens.filter((i) => i.id)) {
+    const atual = itensAtuais?.find((i) => i.id === item.id);
+    if (!atual || atual.produto_id !== item.produto_id) throw new Error("O item não pertence ao pedido ou teve seu produto alterado.");
+  }
 
   const valorTotal = itens.reduce(
     (soma, item) => soma + item.quantidade * item.preco_unitario,
@@ -198,9 +211,10 @@ export async function excluirPedido(id: string) {
   const supabase = await createClient();
   const { data: pedido } = await supabase
     .from("pedidos")
-    .select("tipo_venda")
+    .select("tipo_venda, encomenda_acertos(id)")
     .eq("id", id)
-    .single();
+    .single().throwOnError();
+  if (temAcertoRegistrado(pedido.encomenda_acertos)) throw new Error("Desfaça o acerto da encomenda antes de excluir o pedido.");
   const { error } = await supabase.from("pedidos").delete().eq("id", id);
   if (error) throw error;
   revalidatePath(pedido?.tipo_venda === "encomenda" ? "/encomendas" : "/pedidos");

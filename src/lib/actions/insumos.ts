@@ -130,6 +130,6 @@ export async function excluirLoteInsumo(loteId: string, insumoId: string) {
 
 export async function excluirInsumo(id: string) {
   const supabase = await createClient();
-  await supabase.from("insumos").delete().eq("id", id);
+  await supabase.from("insumos").delete().eq("id", id).throwOnError();
   revalidatePath("/insumos");
 }

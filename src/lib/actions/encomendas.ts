@@ -138,7 +138,7 @@ export async function excluirAcerto(acertoId: string) {
   const { data: itens } = await supabase
     .from("encomenda_acerto_itens")
     .select("perda_id")
-    .eq("acerto_id", acertoId);
+    .eq("acerto_id", acertoId).throwOnError();
 
   const perdaIds = (itens ?? [])
     .map((i) => i.perda_id)

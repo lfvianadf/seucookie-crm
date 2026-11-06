@@ -27,7 +27,7 @@ export async function criarCustoMensal(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("custos_mensais").insert({
+  const { data, error } = await supabase.from("custos_mensais").insert({
     descricao,
     valor,
     competencia: competenciaDe(mes),
@@ -35,10 +35,11 @@ export async function criarCustoMensal(formData: FormData) {
     parcelas,
     // coluna legada, mantida em sincronia enquanto existir
     recorrente: tipo === "recorrente",
-  });
+  }).select("id").single();
 
   if (error) throw new Error(error.message);
   revalidatePath("/financeiro");
+  return data;
 }
 
 export async function atualizarCustoMensal(id: string, formData: FormData) {

@@ -19,7 +19,7 @@ export async function encontrarOuCriarCliente(
     .from("clientes")
     .select("*")
     .eq("telefone", digitos)
-    .maybeSingle();
+    .maybeSingle().throwOnError();
 
   if (existente) return existente;
 
@@ -42,7 +42,7 @@ export async function buscarClientePorTelefone(telefone: string) {
     .from("clientes")
     .select("*")
     .eq("telefone", digitos)
-    .maybeSingle();
+    .maybeSingle().throwOnError();
 
   return data;
 }
@@ -69,8 +69,9 @@ export async function criarCliente(formData: FormData) {
 
   if (!nome || !telefone) return;
 
-  await encontrarOuCriarCliente(nome, telefone, endereco);
+  const cliente = await encontrarOuCriarCliente(nome, telefone, endereco);
   revalidatePath("/clientes");
+  return { id: cliente.id };
 }
 
 export async function atualizarCliente(id: string, formData: FormData) {
@@ -91,7 +92,7 @@ export async function atualizarCliente(id: string, formData: FormData) {
     .select("id, nome")
     .eq("telefone", telefone)
     .neq("id", id)
-    .maybeSingle();
+    .maybeSingle().throwOnError();
 
   if (conflito) {
     throw new Error(`Esse telefone já é de ${conflito.nome}.`);
@@ -128,7 +129,7 @@ export async function excluirCliente(id: string) {
   const { count } = await supabase
     .from("pedidos")
     .select("id", { count: "exact", head: true })
-    .eq("cliente_id", id);
+    .eq("cliente_id", id).throwOnError();
 
   if (count && count > 0) {
     throw new Error(

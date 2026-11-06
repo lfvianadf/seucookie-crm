@@ -96,6 +96,6 @@ export async function duplicarReceita(id: string) {
 
 export async function excluirReceita(id: string) {
   const supabase = await createClient();
-  await supabase.from("receitas").delete().eq("id", id);
+  await supabase.from("receitas").delete().eq("id", id).throwOnError();
   revalidatePath("/insumos/receitas");
 }
