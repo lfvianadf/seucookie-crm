@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
-import { Upload } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { Label, Input, Select, Textarea, FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
@@ -96,28 +95,40 @@ export function ProdutoModal({
       >
         <form ref={formRef} onSubmit={handleSubmit}>
           <FieldGroup className="mb-6">
-            {produtoExistente?.foto_url && (
-              <div className="relative aspect-square w-24 overflow-hidden rounded-lg bg-neutro-100">
-                <Image
-                  src={produtoExistente.foto_url}
-                  alt={produtoExistente.nome}
-                  fill
-                  sizes="96px"
-                  className="object-cover"
-                />
-              </div>
-            )}
-
             <div>
-              <Label>
+              <Label htmlFor="foto">
                 Foto{" "}
                 {produtoExistente?.foto_url && "(enviar nova substitui a atual)"}
               </Label>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border-strong px-3 py-2.5 text-sm text-neutro-500 transition-colors duration-150 hover:border-neutro-300">
-                <Upload className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                <span>Escolher arquivo</span>
-                <input type="file" name="foto" accept="image/*" className="hidden" />
-              </label>
+              <div className="relative">
+                {produtoExistente?.foto_url && (
+                  <Image
+                    src={produtoExistente.foto_url}
+                    alt={produtoExistente.nome}
+                    width={64}
+                    height={64}
+                    className="pointer-events-none absolute top-1/2 left-3 size-16 -translate-y-1/2 rounded-lg object-cover"
+                  />
+                )}
+                <input
+                  id="foto"
+                  name="foto"
+                  type="file"
+                  accept="image/*"
+                  aria-describedby="foto-ajuda"
+                  onChange={({ currentTarget }) => {
+                    const foto = currentTarget.files?.[0];
+                    currentTarget.setCustomValidity(
+                      foto && !foto.type.startsWith("image/") ? "Escolha um arquivo de imagem." : ""
+                    );
+                    currentTarget.reportValidity();
+                  }}
+                  className={`w-full cursor-pointer rounded-lg border border-dashed border-border-strong py-8 pr-3 text-sm text-neutro-500 hover:border-rosa focus-visible:outline-rosa file:mr-2 file:cursor-pointer file:font-medium file:text-berinjela ${produtoExistente?.foto_url ? "pl-24" : "pl-3"}`}
+                />
+              </div>
+              <p id="foto-ajuda" className="mt-1 text-xs text-neutro-500">
+                Arraste a foto para o campo ou clique para escolher uma imagem.
+              </p>
             </div>
 
             <div>
